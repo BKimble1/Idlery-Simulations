@@ -100,6 +100,46 @@ export function worldLeg(from: CamPose, target: () => CamPose): Leg {
   };
 }
 
+/**
+ * A short direct move, for a camera already at the machine: the move in from the establishing
+ * shot (round four: the aisle path's look along the aisle and turn back in swung the view
+ * away from the machine it had just established, and ran the camera along its front).
+ */
+export function directLeg(from: CamPose, target: () => CamPose): Leg {
+  const f = copyPose(makePose(), from);
+  const dist = f.pos.distanceTo(target().pos);
+  return {
+    dur: clamp(0.7 + dist * 0.22, 0.8, 1.8),
+    eval: (u, out) => {
+      out.mix = 0;
+      lerpPose(f, target(), smooth(u), out.a);
+    },
+  };
+}
+
+/** Height a camera leaving a close view of a wafer backs out to before it travels (m). */
+const BACK_OUT_Y = 2.4;
+
+/**
+ * Out of a machine from a close framing of its wafer (round four): back out first along the
+ * line of sight, the way the lesson's camera came in, to above the machine's opened housing,
+ * and travel from there. Heading straight for the aisle from a wafer deep inside a cluster (in
+ * the etch cluster's load lock, say) ran the camera through the front end's wall.
+ */
+export function backOutPose(from: CamPose): CamPose | null {
+  if (from.space !== 'world' || from.scale !== 'wafer') return null;
+  const dir = new THREE.Vector3().subVectors(from.pos, from.target);
+  const len = dir.length();
+  if (len < 1e-4) return null;
+  dir.divideScalar(len);
+  const rise = BACK_OUT_Y - from.pos.y;
+  if (rise < 0.05 || dir.y < 0.2) return null;
+  const out = copyPose(makePose(), from);
+  out.pos.addScaledVector(dir, Math.min(2.5, rise / dir.y));
+  out.scale = 'tool';
+  return out;
+}
+
 /** Reduced motion: hold both compositions still and cross-fade between them. */
 export function fadeLeg(from: CamPose, target: () => CamPose): Leg {
   const f = copyPose(makePose(), from);
@@ -126,15 +166,6 @@ export function holdLeg(pose: CamPose, dur: number): Leg & { pose: CamPose } {
   };
 }
 
-/** The establishing pose held in a flight so far, if any (the next leg starts from it). */
-export function establishPose(legs: Leg[]): CamPose | null {
-  for (let i = legs.length - 1; i >= 0; i--) {
-    const l = legs[i] as Leg & { pose?: CamPose };
-    if (l.pose) return l.pose;
-  }
-  return null;
-}
-
 
 export interface TransitionOpts {
   /** The machine the camera leaves (a retrace from the cross-section starts at its wafer). */
@@ -154,8 +185,20 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
   const probe = target();
   const legs: Leg[] = [];
 
-  /** World to world, via the new machine's establishing shot when changing machine. */
-  const worldPath = (from: CamPose) => {
+  /**
+   * World to world, via the new machine's establishing shot when changing machine. Returns the
+   * pose the last leg starts from (the establishing shot, say).
+   */
+  const worldPath = (start: CamPose): CamPose => {
+    let from = start;
+    if (o.from && o.to && o.from !== o.to) {
+      // leaving a close view of the wafer: back out along the line of sight first
+      const back = backOutPose(from);
+      if (back) {
+        legs.push(directLeg(from, () => back));
+        from = back;
+      }
+    }
     if (o.establish && o.to) {
       // the whole new machine, sealed: its housing opens only as the camera moves in from here
       const est = machinePose(o.to, makePose());
@@ -165,13 +208,13 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
       travel.between = true;
       legs.push(travel);
       legs.push(holdLeg(est, 0.35));
-      legs.push(worldLeg(est, target));
-      legs[legs.length - 1].between = false;
-    } else {
-      legs.push(worldLeg(from, target));
-      // a move without a change of machine hands nothing over
-      if (!o.from || !o.to || o.from === o.to) legs[legs.length - 1].between = false;
+      legs.push(directLeg(est, target));
+      return est;
     }
+    legs.push(worldLeg(from, target));
+    // a move without a change of machine hands nothing over
+    if (!o.from || !o.to || o.from === o.to) legs[legs.length - 1].between = false;
+    return from;
   };
 
   if (o.reduced) {
@@ -198,10 +241,10 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
     if (!o.to || waferShown(o.to)) resolve({ kind: 'wafer', framing: 'die' }, { station: o.to }, anchor);
     else machinePose(o.to, anchor);
     o.fit(anchor);
-    worldPath(startPose);
+    const from = worldPath(startPose);
     legs.pop();
-    const from = establishPose(legs) ?? startPose;
-    if (from.pos.distanceTo(anchor.pos) > 0.05) legs.push(worldLeg(from, () => anchor));
+    // (from the establishing shot, straight in, as to any other framing of the machine)
+    if (from.pos.distanceTo(anchor.pos) > 0.05) legs.push(o.establish && o.to ? directLeg(from, () => anchor) : worldLeg(from, () => anchor));
     legs.push({ dur: 1.2, eval: (u, out) => worldToDevice(anchor, target(), u, o.to, out) });
   }
   return legs;
