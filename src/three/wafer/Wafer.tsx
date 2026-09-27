@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { drawWafer, lookKey, makeCanvasTexture, PUDDLE, RESIST_MAX_NM, type WaferLook } from './waferTexture';
+import { dieStageKey, drawDieDetail, type DieStage } from './dieArt';
 import { framingRegistry, waferRegistry } from '../stage/anchors';
 import { useStationEnv } from '../stage/context';
 import { usePresentation } from '../../state/presentation';
@@ -149,6 +150,22 @@ function fieldsTexture(fields: readonly { x: number; y: number; w: number; h: nu
 }
 
 const R_MM = WAFER.radius.toFixed(1);
+/**
+ * Round four: every die shows its structure close up (dieArt.ts), drawn over the painted
+ * surface before any film on top of it (a resist coat still tints it). The die texture is a
+ * brightness modulation around grey; sampled with the derivatives of the unwrapped die
+ * coordinate, so the die boundaries do not break its filtering.
+ */
+const DIE_GLSL = /* glsl */ `
+if (uDieOn > 0.5) {
+  vec2 mmd = (vMapUv * 2.0 - 1.0) * ${R_MM};
+  if (length(mmd) < ${(WAFER.radius - 1).toFixed(1)}) {
+    vec2 cell = mmd / vec2(${WAFER.dieW.toFixed(2)}, ${WAFER.dieH.toFixed(2)});
+    vec4 dd = textureGrad(uDie, fract(cell), dFdx(cell), dFdy(cell));
+    diffuseColor.rgb *= mix(vec3(1.0), dd.rgb * 2.0, dd.a);
+  }
+}
+`;
 const COAT_GLSL = /* glsl */ `
 if (uCoatOn > 0.5) {
   float u = length(vMapUv * 2.0 - 1.0);
@@ -192,6 +209,8 @@ function makeCoatUniforms() {
     uFieldsOn: { value: 0 },
     uFieldsDone: { value: 0 },
     uFields: { value: null as THREE.Texture | null },
+    uDieOn: { value: 0 },
+    uDie: { value: null as THREE.Texture | null },
   };
 }
 
@@ -204,9 +223,9 @@ function makeTopMaterial(tex: THREE.Texture, uniforms: ReturnType<typeof makeCoa
     sh.fragmentShader = sh.fragmentShader
       .replace(
         '#include <common>',
-        '#include <common>\nuniform float uCoatOn;\nuniform vec4 uCoat;\nuniform float uEbr;\nuniform sampler2D uLut;\nuniform float uLutMax;\nuniform float uPuddleOn;\nuniform vec3 uPuddle;\nuniform float uFieldsOn;\nuniform float uFieldsDone;\nuniform sampler2D uFields;',
+        '#include <common>\nuniform float uCoatOn;\nuniform vec4 uCoat;\nuniform float uEbr;\nuniform sampler2D uLut;\nuniform float uLutMax;\nuniform float uPuddleOn;\nuniform vec3 uPuddle;\nuniform float uFieldsOn;\nuniform float uFieldsDone;\nuniform sampler2D uFields;\nuniform float uDieOn;\nuniform sampler2D uDie;',
       )
-      .replace('#include <map_fragment>', '#include <map_fragment>\n' + COAT_GLSL);
+      .replace('#include <map_fragment>', '#include <map_fragment>\n' + DIE_GLSL + COAT_GLSL);
   };
   m.customProgramCacheKey = () => 'wafer-coat';
   return m;
@@ -291,6 +310,29 @@ export function Wafer({
   useEffect(() => () => lut?.tex.dispose(), [lut]);
   const fieldsTex = useMemo(() => (fieldRects ? fieldsTexture(fieldRects) : null), [fieldRects]);
   useEffect(() => () => fieldsTex?.dispose(), [fieldsTex]);
+  // the dies' structure close up, redrawn only when the die gains a layer (dieArt.ts)
+  const die = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = 512;
+    c.height = 650;
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.NoColorSpace;
+    t.anisotropy = 4;
+    return { c, t };
+  }, []);
+  useEffect(() => () => die.t.dispose(), [die]);
+  const dieStage: DieStage = { pattern: look.plain ? 0 : look.summary.pattern, metalLevels: look.summary.metalLevels, passivated: look.summary.passivated };
+  const dieKey = dieStageKey(dieStage);
+  const dieDrawn = useRef('');
+  useEffect(() => {
+    if (dieDrawn.current === dieKey) return;
+    dieDrawn.current = dieKey;
+    const ctx = die.c.getContext('2d');
+    if (!ctx) return;
+    drawDieDetail(ctx, die.c.width, die.c.height, dieStage);
+    die.t.needsUpdate = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dieKey]);
   useFrame(() => {
     const on = !!coat?.on && !!lut;
     uniforms.uCoatOn.value = on ? 1 : 0;
@@ -302,6 +344,8 @@ export function Wafer({
       uniforms.uPuddleOn.value = liveFilm.mat === M.RES ? 1 : 0;
       uniforms.uPuddle.value.copy(lut.puddle);
     }
+    uniforms.uDieOn.value = dieStage.pattern > 0 ? 1 : 0;
+    uniforms.uDie.value = die.t;
     const fOn = !!liveFields?.on && !!fieldsTex && liveFields.done > 0;
     uniforms.uFieldsOn.value = fOn ? 1 : 0;
     if (fOn && liveFields && fieldsTex) {

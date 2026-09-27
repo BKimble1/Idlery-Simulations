@@ -6,15 +6,17 @@
  * chrome border that carries the reticle's barcode, its identification and its own alignment
  * marks.
  *
- * Each die has the structure real layouts have at this scale: a seal ring and a ring of bond
+ * Each die has the structure real layouts have at this scale — a seal ring and a ring of bond
  * pads at its edge, dense regular arrays (memory-like blocks, fine gratings that read as grey),
- * irregular logic, wide wiring channels and a few large analog blocks. Nothing is copied from
- * a real design; a fixed seed makes every reticle of a kind the same.
+ * irregular logic, wiring channels and a few large analog blocks — laid out by the die's floor
+ * plan (wafer/dieArt.ts), which the wafer shows in every die it prints. Nothing is copied from
+ * a real design; fixed seeds make every reticle of a kind the same.
  *
  * Tone follows the layer: the gate layer's positive-resist mask is clear-field (chrome lines
  * on clear quartz); the contact layer's is dark-field (chrome everywhere but the holes).
  */
 import { mulberry32 } from '../../sim/rng';
+import { dieFloorplan } from '../wafer/dieArt';
 
 export type ReticleKind = 'poly' | 'contact';
 
@@ -106,45 +108,34 @@ export function drawReticle(ctx: CanvasRenderingContext2D, size: number, kind: R
     rect(x - 0.35, y - s / 2, 0.7, s, c);
   }
 
-  /** One die: seal ring, pad ring, then blocks of arrays, logic, wiring and analog. */
+  /**
+   * One die, as its floor plan lays it out (wafer/dieArt.ts: the wafer shows the same plan in
+   * every die), at 4×: seal ring, pad ring, then blocks of arrays, logic and analog, and wiring
+   * channels between them.
+   */
   function die(x0: number, y0: number, w: number, h: number) {
-    // seal ring
-    const ring = 0.6;
-    rect(x0, y0, w, ring, fg);
-    rect(x0, y0 + h - ring, w, ring, fg);
-    rect(x0, y0, ring, h, fg);
-    rect(x0 + w - ring, y0, ring, h, fg);
-    // bond pads along each edge
-    const pad = 1.6;
-    const padGap = 1.2;
-    for (let x = x0 + 3; x < x0 + w - 3 - pad; x += pad + padGap) {
-      rect(x, y0 + 1.4, pad, pad, fg);
-      rect(x, y0 + h - 1.4 - pad, pad, pad, fg);
+    const fp = dieFloorplan();
+    const s = 4;
+    const ox = x0 + (w - fp.w * s) / 2;
+    const oy = y0 + (h - fp.h * s) / 2;
+    const at = (x: number, y: number, ww: number, hh: number, c: string) => rect(ox + x * s, oy + y * s, ww * s, hh * s, c);
+    const r = fp.ring;
+    at(0, 0, fp.w, r, fg);
+    at(0, fp.h - r, fp.w, r, fg);
+    at(0, 0, r, fp.h, fg);
+    at(fp.w - r, 0, r, fp.h, fg);
+    for (const p of fp.pads) at(p.x, p.y, p.s, p.s, fg);
+    for (const b of fp.blocks) {
+      const bx = ox + b.x * s;
+      const by = oy + b.y * s;
+      const bw = b.w * s;
+      const bh = b.h * s;
+      const own = mulberry32(b.seed);
+      if (b.kind === 'array') array(bx, by, bw, bh);
+      else if (b.kind === 'logic') logic(bx, by, bw, bh, own);
+      else analog(bx, by, bw, bh, own);
     }
-    for (let y = y0 + 3; y < y0 + h - 3 - pad; y += pad + padGap) {
-      rect(x0 + 1.4, y, pad, pad, fg);
-      rect(x0 + w - 1.4 - pad, y, pad, pad, fg);
-    }
-    // the core, divided into blocks
-    const cx0 = x0 + 5;
-    const cy0 = y0 + 5;
-    const cw = w - 10;
-    const ch = h - 10;
-    const cols = [0, 0.38, 0.62, 1];
-    const rows = [0, 0.3, 0.55, 0.78, 1];
-    for (let a = 0; a < cols.length - 1; a++)
-      for (let b = 0; b < rows.length - 1; b++) {
-        const bx0 = cx0 + cols[a] * cw + 0.6;
-        const by0 = cy0 + rows[b] * ch + 0.6;
-        const bw = (cols[a + 1] - cols[a]) * cw - 1.2;
-        const bh = (rows[b + 1] - rows[b]) * ch - 1.2;
-        const r = rnd();
-        if (r < 0.34) array(bx0, by0, bw, bh);
-        else if (r < 0.8) logic(bx0, by0, bw, bh);
-        else analog(bx0, by0, bw, bh);
-      }
-    // wiring channels between the blocks
-    for (const f of rows.slice(1, -1)) rect(cx0, cy0 + f * ch - 0.25, cw, 0.5, dark ? fg : CHROME);
+    for (const y of fp.channels) at(1.25, y - 0.0625, fp.w - 2.5, 0.125, dark ? fg : CHROME);
   }
 
   /** A dense, regular array: a fine grating (or a grid of holes) that reads as an even grey
@@ -157,7 +148,7 @@ export function drawReticle(ctx: CanvasRenderingContext2D, size: number, kind: R
   }
 
   /** Irregular logic: many small rectangles of a few standard heights, in rows. */
-  function logic(x0: number, y0: number, w: number, h: number) {
+  function logic(x0: number, y0: number, w: number, h: number, rnd: () => number) {
     const rowH = 1.1;
     for (let y = y0; y < y0 + h - rowH; y += rowH + 0.25) {
       let x = x0;
@@ -173,7 +164,7 @@ export function drawReticle(ctx: CanvasRenderingContext2D, size: number, kind: R
   }
 
   /** A few large devices (capacitors, transistors in wide arrays) with guard rings. */
-  function analog(x0: number, y0: number, w: number, h: number) {
+  function analog(x0: number, y0: number, w: number, h: number, rnd: () => number) {
     rect(x0, y0, w, 0.4, fg);
     rect(x0, y0 + h - 0.4, w, 0.4, fg);
     rect(x0, y0, 0.4, h, fg);
