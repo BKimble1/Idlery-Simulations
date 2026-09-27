@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 import { FILM } from '../content/film';
 import { STEPS } from '../content/steps';
@@ -6,7 +5,10 @@ import { STEP_INDEX } from '../sim/flow';
 import narration from '../content/narration.json';
 import { buildTimeline, cueAt, inputAt, locate, progressOf, type FilmManifest } from './timeline';
 
-const manifest = JSON.parse(readFileSync(`public/narration/${narration.version}/manifest.json`, 'utf8')) as FilmManifest;
+// (the built manifests, through Vite's glob import: the app's type check has no Node types, so
+// reading the file with node:fs failed `tsc -b` on a fresh install)
+const manifests = import.meta.glob<FilmManifest>('../../public/narration/*/manifest.json', { eager: true, import: 'default' });
+const manifest = manifests[`../../public/narration/${narration.version}/manifest.json`];
 const tl = buildTimeline(manifest);
 
 describe('film timeline', () => {
