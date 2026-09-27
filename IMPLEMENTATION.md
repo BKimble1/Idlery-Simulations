@@ -505,7 +505,11 @@ another machine, the camera first backs out along its own line of sight to 2.4 m
 (`backOutPose`); the move in from an establishing shot is direct; *Inspect layers* at a machine
 whose wafer is not in view reveals the layers from where the camera is, and *Back to
 equipment* fades straight into the machine's framing (no flight out to its establishing shot
-and back). **The room** (`stage/tracks.ts` `ROOM`, `roomAlong`, `fitInRoom`): a camera among
+and back). A direct move that turns the view by more than a quarter turn — between machines
+that face each other across the aisle — pans about the vertical (`tracks.ts` `turnPose`:
+heading the short way round, fixed when the move is planned; pitch and the distance to what it
+looks at in proportion; 1 s plus 0.45 s per radian of turn at least): moving the point looked
+at in a straight line swept it under the camera, which looked down at the floor. **The room** (`stage/tracks.ts` `ROOM`, `roomAlong`, `fitInRoom`): a camera among
 the machines stays over the central aisle (|z| ≤ 1.4 m, clear of the overhead rail above the
 load ports), under the ceiling (y ≤ 4.05 m) and inside the walls. A machine's establishing
 shot stands at most at the far side of the aisle, and a large machine is framed from there

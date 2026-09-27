@@ -52,8 +52,9 @@ end commit given in [Verification](#verification-commands-and-results).
   row at the ceiling, where round three's camera went through it). Leaving a close view of the
   wafer it backs out along its line of sight before travelling; the move in from an
   establishing shot is direct; *Inspect layers* at a machine whose wafer is out of view reveals
-  the layers from where the camera is. The blank frames between the dicing saw and the die
-  bonder are gone.
+  the layers from where the camera is; between machines that face each other across the aisle
+  it pans round instead of dipping to the floor. The blank frames between the dicing saw and
+  the die bonder are gone.
 * **In Watch, the narration waits for the picture.** If a machine is still loading when the film
   needs it, the film's clock and narration pause where they are (the page says what it is
   waiting for) and carry on from the same moment once it is in. In a background tab, with no
@@ -416,13 +417,14 @@ What the brief asked for, what was found and what was done. Frame sequences are 
   programs shadows are drawn with: measured with `scripts/programs.mjs` on the move from the
   CD-SEM to the etch cluster, the key light's first shadow of the opening housing compiled a
   depth program **in the middle of the move in** (a 12.7 s block on this renderer, measured
-  while other work was running); round three compiled the same kind of program on arrival (a
-  5.1 s block, under the same conditions, while the picture was held). Now every prepared
-  model is also drawn once into a small shadow map of its own, right after a frame, so three.js
-  builds exactly the programs its shadow pass will ask for (`stage/shadowPrewarm.ts`, for the
+  while other work was running). Round three has the same stall, shorter: on an idle machine
+  its move compiled one depth program in the middle of the move in both of two runs (1.3 and
+  2.5 s blocks; in a run under load, 5.1 s just after arrival). Now every prepared model is
+  also drawn once into a small shadow map of its own, right after a frame, so three.js builds
+  exactly the programs its shadow pass will ask for (`stage/shadowPrewarm.ts`, for the
   machines and the housings' opened materials): the same move compiles no program at all, in
-  the move or on arrival. A test records every program link and whether the camera was
-  moving.
+  the move or on arrival, and has no long task (two runs on an idle machine). A test records
+  every program link and whether the camera was moving.
 * **Shells are preloaded.** Every machine's closed housing is part of the bay from the first
   frame; the detailed interiors are prepared while the camera is still (round three).
 * **A deliberate exterior → interior reveal.** Closed during the travel and the establishing
@@ -459,7 +461,20 @@ What the brief asked for, what was found and what was done. Frame sequences are 
   of 19.8 for the move. Fixed by the direct move in; round four's build: lowest 22.0. A test
   requires every frame of both moves to have a spread above 6 and the camera's path to be
   clear.
-* **Inspect layers at a machine whose wafer is out of view** (the prober, for example, holds
+* **Between machines that face each other across the aisle, the camera looked down at the
+  floor (CD-SEM → gate etch)** (a regression of this round's room limits, found at the end of
+  the round in the clip of the arrival at the etch cluster; fixed). The CD-SEM's lesson ends on
+  a view into it from across the aisle; the etch cluster's establishing shot, now kept to the
+  far side of the aisle, looks back from 2 m away: the short, direct move between them swapped
+  the camera's side and its direction of view, and moving the point it looks at in a straight
+  line swept that point under the camera. Measured frame by frame at 1280 × 800 on the build
+  before the fix: half-way the view pitched 68° down and one frame was the bare floor (a
+  luminance spread of 0.0). Round three's establishing shot stood over the other row, and its
+  walk found no blank frame on this move. A direct move that turns the view by more than a
+  quarter turn now pans about the vertical — heading the short way round, pitch and the distance
+  to what it looks at in proportion (`stage/tracks.ts` `turnPose`, used by `flights.ts`), over
+  a little more time (1 s plus 0.45 s per radian of turn): on the same move the view is never
+  steeper than 32° and the lowest spread is 22.4; the move takes 120 frames instead of 91. (the prober, for example, holds
   the wafer under its probe card) first flew out to the machine's establishing shot. Measured on
   round three's build: the camera turned away from the prober down onto the aisle floor — for
   five frames the picture is nothing but floor, two of them a single flat colour (luminance
@@ -593,9 +608,10 @@ continuity evidence, not frame-rate evidence):
 
 The nine scenarios of round three (`scripts/perf.mjs`), driven as a learner would drive them
 (clicks and keys, the wall clock, production builds), once on each build, one after the other
-within the same hour with nothing else running on the machine: round three's build (`be6bf3f`)
-and this round's (`89cbd70`). Chromium 141 (Playwright 1.56.1's headless shell); WebGL through
-ANGLE on SwiftShader (Vulkan, Subzero JIT) on 4 CPU cores, no GPU; the app chose its `low` tier
+within the same quarter of an hour with nothing else running on the machine: round three's
+build (`be6bf3f`) and this round's final build (`0e35bcf`). Chromium 141 (Playwright 1.56.1's
+headless shell); WebGL through ANGLE on SwiftShader (Vulkan, Subzero JIT) on 4 CPU cores, no
+GPU; the app chose its `low` tier
 for this renderer (pixel ratio 1, 1024² shadow maps, a shadow refresh every 30 frames); desktop
 scenarios at 1280 × 800 and pixel ratio 1, the phone scenario at 390 × 844 and pixel ratio 2
 (rendered at 1). Every frame is drawn by the CPU, so these numbers compare the two builds with
@@ -607,82 +623,114 @@ Whole scenarios, round three → round four:
 
 | scenario | frames per second | frame interval median / p95 / p99 / max (ms) | frames > 50 ms / > 100 ms | long tasks: count, total (s), longest (s) | draw calls median / max | triangles median / max (thousands) |
 |---|---|---|---|---|---|---|
-| home-idle | 5.7 → 2.7 | 150 / 533.3 / 1783.2 / 1783.2 → 66.6 / 933.4 / 2000 / 2000 | 32 / 29 → 11 / 9 | 2, 0.6, 0.4 → 2, 0.7, 0.5 | 53 / 72 → 218 / 237 | 21 / 21 → 52 / 52 |
-| arrive-transfer-scan | 1.5 → 1 | 33.3 / 2616.6 / 3733.2 / 4383.2 → 66.7 / 4083.2 / 6049.7 / 6049.7 | 29 / 28 → 25 / 22 | 7, 4.1, 1.5 → 7, 7.5, 6.1 | 192 / 265 → 214 / 256 | 114 / 154 → 127 / 155 |
-| prime-coat-softbake | 1.7 → 0.6 | 650 / 1333.3 / 1416.7 / 1416.7 → 1533.3 / 3016.5 / 4216.4 / 4216.4 | 40 / 37 → 21 / 20 | 2, 0.3, 0.3 → 1, 0.1, 0.1 | 140 / 149 → 139 / 149 | 70 / 76 → 75 / 77 |
-| expose-peb-develop | 1.7 → 0.8 | 166.7 / 2016.6 / 2199.9 / 2599.9 → 216.7 / 3483.2 / 5249.8 / 5249.8 | 41 / 40 → 18 / 18 | 1, 0.2, 0.2 → 1, 0.2, 0.2 | 40 / 227 → 147 / 174 | 21 / 128 → 74 / 95 |
-| layers-interrupt | 1.3 → 0.9 | 83.3 / 3466.5 / 5016.4 / 5049.8 → 33.3 / 5099.8 / 8966.3 / 9032.9 | 30 / 29 → 27 / 25 | 4, 2.8, 1.5 → 4, 6.5, 3.2 | 250 / 551 → 275 / 558 | 177 / 407 → 220 / 445 |
-| explore-roundtrip | 1.2 → 1 | 650 / 3299.9 / 4466.5 / 4466.5 → 433.4 / 3233.2 / 4799.9 / 4799.9 | 22 / 21 → 29 / 28 | 3, 3.7, 2.1 → 4, 10.3, 6.6 | 553 / 641 → 320 / 616 | 408 / 454 → 100 / 467 |
-| nav-loop | 1.4 → 0.5 | 100.1 / 3749.9 / 5283 / 5283 → 699.9 / 7666.3 / 7816.4 / 7816.4 | 26 / 24 → 14 / 12 | 12, 9.8, 5.3 → 9, 17.0, 7.8 | 170 / 276 → 237 / 257 | 135 / 199 → 145 / 155 |
-| phone-coat-explore | 6.3 → 2.4 | 116.7 / 416.8 / 666.6 / 1283.3 → 416.7 / 883.4 / 1816.6 / 1816.6 | 57 / 52 → 28 / 28 | 1, 0.6, 0.6 → 1, 1.2, 1.2 | 135 / 231 → 267 / 316 | 68 / 110 → 86 / 98 |
-| watch-minute | 1.1 → 0.6 | 833.3 / 2416.6 / 2466.6 / 3183.3 → 1749.9 / 4666.4 / 8232.9 / 8232.9 | 56 / 53 → 27 / 26 | 6, 5.9, 3.2 → 7, 8.3, 4.9 | 151 / 233 → 155 / 219 | 86 / 131 → 65 / 79 |
+| home-idle | 5.9 → 3 | 133.4 / 400 / 1749.9 / 1749.9 → 50 / 1149.9 / 1200 / 1200 | 34 / 31 → 11 / 11 | 2, 0.6, 0.4 → 3, 1.6, 1.0 | 53 / 72 → 218 / 298 | 21 / 21 → 52 / 108 |
+| arrive-transfer-scan | 1.5 → 1 | 100 / 2549.9 / 2683.2 / 4499.7 → 33.4 / 3899.8 / 3966.6 / 3966.6 | 31 / 30 → 24 / 24 | 7, 3.9, 2.6 → 7, 7.1, 3.9 | 192 / 265 → 214 / 277 | 114 / 154 → 127 / 161 |
+| prime-coat-softbake | 1.8 → 0.6 | 583.3 / 1266.6 / 1416.6 / 1700 → 1483.2 / 3116.5 / 3266.5 / 3266.5 | 39 / 39 → 18 / 18 | 1, 0.2, 0.2 → 1, 0.1, 0.1 | 140 / 145 → 138 / 205 | 70 / 73 → 75 / 102 |
+| expose-peb-develop | 1.6 → 0.8 | 283.3 / 1866.6 / 1883.3 / 3099.8 → 233.4 / 3833.2 / 4883.2 / 4883.2 | 38 / 38 → 18 / 17 | 1, 0.2, 0.2 → 1, 0.3, 0.3 | 59 / 227 → 142 / 235 | 29 / 128 → 74 / 128 |
+| layers-interrupt | 1.1 → 0.7 | 66.7 / 5033.1 / 6933.1 / 7033.1 → 33.3 / 8766.4 / 9033 / 11599.5 | 33 / 29 → 28 / 26 | 3, 0.9, 0.5 → 4, 4.5, 1.9 | 100 / 551 → 272 / 558 | 71 / 407 → 219 / 445 |
+| explore-roundtrip | 1.2 → 1 | 533.4 / 1849.9 / 1883.3 / 1883.3 → 600 / 3099.8 / 3816.4 / 3816.4 | 23 / 23 → 21 / 20 | 3, 2.0, 1.3 → 4, 7.4, 5.1 | 553 / 641 → 359 / 797 | 408 / 454 → 119 / 536 |
+| nav-loop | 2.1 → 0.6 | 133.4 / 1450 / 4333.1 / 6916.4 → 300 / 9249.7 / 9683 / 9683 | 47 / 45 → 20 / 16 | 13, 14.1, 6.9 → 13, 23.7, 9.7 | 202 / 413 → 237 / 546 | 135 / 262 → 145 / 395 |
+| phone-coat-explore | 4.6 → 2.2 | 200 / 433.3 / 533.4 / 1350 → 450 / 866.7 / 933.4 / 933.4 | 44 / 42 → 23 / 23 | 1, 0.5, 0.5 → 1, 1.6, 1.6 | 144 / 226 → 142 / 316 | 72 / 109 → 74 / 98 |
+| watch-minute | 1.3 → 0.6 | 899.8 / 1983.4 / 2266.6 / 2533.2 → 1016.6 / 5433.1 / 7866.3 / 7866.3 | 65 / 63 → 30 / 29 | 6, 4.8, 1.8 → 7, 9.5, 5.4 | 151 / 233 → 151 / 248 | 86 / 130 → 62 / 114 |
 
-The moves between lessons and views, per phase: the longest frame while the camera moved (a stall
+The moves between lessons and views, and the lessons themselves, per phase (`to-…` a move,
+`play-…` a lesson playing, as in round three): the longest frame while the camera moved (a stall
 in the middle of a move), the longest frame otherwise (the picture held, for instance while a
 machine is prepared), and long tasks (count, the longest in seconds); — where no frame
 qualifies:
 
 | scenario | phase | longest frame while moving (s) | longest frame otherwise (s) | long tasks (longest, s) |
 |---|---|---|---|---|
-| home-idle | idle | 1.78 → 0.93 | 0.05 → 2.00 | 2 (0.43) → 2 (0.47) |
-| arrive-transfer-scan | cold-load | — → — | 1.53 → 0.67 | 4 (1.55) → 4 (0.48) |
-| arrive-transfer-scan | to-transfer | — → — | 2.53 → 4.08 | 1 (0.10) → 1 (0.12) |
-| arrive-transfer-scan | to-scan | 2.62 → — | 3.73 → 6.05 | 2 (1.36) → 2 (6.06) |
-| prime-coat-softbake | to-coat | — → — | 0.78 → 4.22 | 1 (0.06) → 0 |
-| prime-coat-softbake | to-softbake | — → — | 1.12 → 1.68 | 1 (0.27) → 1 (0.14) |
-| expose-peb-develop | to-peb | 0.02 → — | 2.08 → 5.25 | 0 → 0 |
-| expose-peb-develop | to-develop | 0.73 → — | 0.20 → 2.10 | 1 (0.20) → 1 (0.24) |
-| layers-interrupt | toggles | 2.77 → 2.33 | 5.05 → 9.03 | 4 (1.53) → 4 (3.15) |
-| explore-roundtrip | to-fab | 0.78 → 0.12 | — → — | 0 → 0 |
-| explore-roundtrip | to-etch | 0.85 → 0.47 | 2.08 → 3.63 | 3 (2.07) → 3 (6.56) |
-| explore-roundtrip | demo | 4.47 → — | 0.63 → 1.87 | 0 → 1 (1.86) |
-| explore-roundtrip | return | — → — | 1.13 → 0.78 | 0 → 0 |
-| nav-loop | loop | 4.13 → — | 5.28 → 7.82 | 12 (5.28) → 9 (7.81) |
-| phone-coat-explore | to-fab | 0.38 → 0.72 | 0.42 → 0.88 | 1 (0.58) → 1 (1.24) |
-| watch-minute | film | 2.23 → 1.77 | 3.18 → 8.23 | 6 (3.19) → 7 (4.86) |
+| home-idle | idle | 1.75 → 1.20 | 0.07 → 1.02 | 2 (0.41) → 3 (1.04) |
+| arrive-transfer-scan | cold-load | — → — | 0.47 → 1.87 | 4 (0.47) → 4 (1.88) |
+| arrive-transfer-scan | play-arrive | — → — | 1.93 → 2.28 | 0 → 0 |
+| arrive-transfer-scan | to-transfer | — → — | 2.40 → 3.90 | 1 (0.11) → 1 (0.12) |
+| arrive-transfer-scan | play-transfer | — → — | 1.23 → 3.70 | 0 → 0 |
+| arrive-transfer-scan | to-scan | — → — | 2.68 → 3.97 | 2 (2.61) → 2 (3.90) |
+| arrive-transfer-scan | play-scan | 2.40 → 1.98 | 1.12 → 1.90 | 0 → 0 |
+| prime-coat-softbake | play-prime | — → — | 1.42 → 3.02 | 0 → 0 |
+| prime-coat-softbake | to-coat | — → — | 1.22 → 3.12 | 0 → 0 |
+| prime-coat-softbake | play-coat | — → 3.00 | 1.20 → 2.88 | 0 → 0 |
+| prime-coat-softbake | to-softbake | — → — | 1.12 → 3.02 | 1 (0.21) → 1 (0.13) |
+| prime-coat-softbake | play-softbake | 0.60 → 1.38 | 1.20 → 1.50 | 0 → 0 |
+| expose-peb-develop | play-expose | — → — | 1.88 → — | 0 → 0 |
+| expose-peb-develop | to-peb | 1.73 → — | 1.87 → 4.88 | 0 → 0 |
+| expose-peb-develop | play-peb | 1.10 → — | 1.87 → 3.12 | 0 → 0 |
+| expose-peb-develop | to-develop | 0.97 → — | 1.00 → 3.83 | 1 (0.20) → 1 (0.26) |
+| expose-peb-develop | play-develop | 1.65 → 1.77 | 3.10 → 2.97 | 0 → 0 |
+| layers-interrupt | toggles | 6.93 → 2.20 | 7.03 → 11.60 | 3 (0.51) → 4 (1.85) |
+| explore-roundtrip | to-fab | 0.60 → — | — → 1.48 | 0 → 0 |
+| explore-roundtrip | to-etch | 1.23 → — | 0.75 → 3.10 | 3 (1.30) → 1 (5.05) |
+| explore-roundtrip | demo | 1.85 → 0.55 | 1.73 → 1.43 | 0 → 3 (1.31) |
+| explore-roundtrip | return | — → — | 0.02 → 2.85 | 0 → 0 |
+| explore-roundtrip | rest | — → — | 0.92 → — | 0 → 0 |
+| nav-loop | loop | 6.92 → 0.30 | 4.33 → 9.68 | 13 (6.92) → 13 (9.68) |
+| nav-loop | rest | — → — | 0.23 → — | 0 → 0 |
+| phone-coat-explore | play-coat | 0.15 → 0.02 | 1.35 → 0.93 | 0 → 0 |
+| phone-coat-explore | to-fab | — → — | 0.18 → 0.43 | 0 → 0 |
+| phone-coat-explore | fab | 0.38 → 0.83 | 0.40 → 0.87 | 1 (0.54) → 1 (1.59) |
+| watch-minute | film | 2.17 → 2.32 | 2.53 → 7.87 | 6 (1.83) → 7 (5.44) |
 
 Resources at the end of each scenario:
 
 | scenario | geometries / textures / shader programs / JS heap MB, round three → round four |
 |---|---|
-| home-idle | 72 / 14 / 23 / 39 → 295 / 14 / 23 / 37 |
-| arrive-transfer-scan | 230 / 19 / 31 / 61 → 307 / 21 / 31 / 63 |
-| prime-coat-softbake | 154 / 16 / 24 / 58 → 202 / 19 / 27 / 54 |
-| expose-peb-develop | 272 / 21 / 25 / 66 → 292 / 25 / 28 / 62 |
-| layers-interrupt | 363 / 16 / 27 / 63 → 422 / 16 / 29 / 66 |
-| explore-roundtrip | 498 / 16 / 27 / 75 → 684 / 19 / 32 / 71 |
-| nav-loop | 332 / 21 / 35 / 90 → 254 / 22 / 35 / 93 |
-| phone-coat-explore | 195 / 14 / 22 / 53 → 397 / 16 / 25 / 51 |
-| watch-minute | 296 / 24 / 27 / 56 → 381 / 24 / 29 / 46 |
+| home-idle | 72 / 14 / 23 / 39 → 374 / 16 / 25 / 23 |
+| arrive-transfer-scan | 230 / 19 / 31 / 61 → 353 / 23 / 31 / 64 |
+| prime-coat-softbake | 150 / 16 / 24 / 59 → 264 / 21 / 27 / 54 |
+| expose-peb-develop | 274 / 21 / 25 / 66 → 383 / 28 / 28 / 62 |
+| layers-interrupt | 363 / 16 / 27 / 64 → 423 / 19 / 29 / 66 |
+| explore-roundtrip | 499 / 16 / 27 / 70 → 684 / 21 / 32 / 70 |
+| nav-loop | 451 / 22 / 35 / 90 → 605 / 24 / 37 / 77 |
+| phone-coat-explore | 195 / 14 / 22 / 68 → 397 / 18 / 25 / 62 |
+| watch-minute | 296 / 25 / 27 / 65 → 515 / 28 / 30 / 47 |
 
 What this shows:
 
-* **This round's look costs about half the frame rate on this renderer.** The cause was measured
-  frame by frame on the harness clock (the time for 12 frames, drawing finished, at the `low`
-  tier): the cleanroom reflection environment that every lit surface samples. Removed at run
-  time, it halves the frame time — the bay from the home view 633 → 314 ms, the coat lesson
-  1584 → 804 ms, the exposure 1714 → 844 ms; shadows account for 5–10 %; half the pixel ratio
-  makes a frame about four times cheaper (the renderer is bound by pixels); a smaller
-  environment texture (64 instead of 256 px) changes nothing. Draw calls rose where the whole
-  bay is in view (home 53 → 218: the housings are lit now, one mesh per finish, where round three
-  baked them into a few); triangles rose modestly.
+* **This round's look costs about half the frame rate on this renderer** (0.3–0.8 of round
+  three's, scenario by scenario). The cause was measured frame by frame on the harness clock
+  (the time for 12 frames, drawing finished, at the `low` tier; on this round's build before its
+  last fixes, none of which changes what a frame costs to draw): the cleanroom reflection
+  environment that every lit surface samples. Removed at run time, it halves the frame time —
+  the bay from the home view 633 → 314 ms, the coat lesson 1584 → 804 ms, the exposure
+  1714 → 844 ms; shadows account for 5–10 %; half the pixel ratio makes a frame about four times
+  cheaper (the renderer is bound by pixels); a smaller environment texture (64 instead of
+  256 px) changes nothing. Draw calls rose where the whole bay is in view (home 53 → 218: the
+  housings are lit now, one mesh per finish, where round three baked them into a few); triangles
+  rose modestly (home 21 → 52 thousand).
 * On graphics hardware, sampling a reflection environment is a handful of texture reads per pixel,
   and 200–300 draw calls are within ordinary budgets — but that was not measured. If a device
   cannot hold its frame rate at the `low` tier, a tier without reflections is the next step. It
   was not taken this round: without an environment, metals render almost black in this
   renderer, and every picture of the round would change.
-* **Moves.** The longest frame in the middle of a move is shorter or absent in every scenario but
-  the phone's (0.38 → 0.72 s) — with frames this slow a move spans only a few of them, so that
-  column says less than it did in round three. The long blocks come while the picture is held
-  for a machine being prepared, and they are longer than round three's (arriving at the
-  inspection tool 1.4 → 6.1 s, the explorer's move to the etch cluster 2.1 → 6.6 s, the
-  navigation loop 5.3 → 7.8 s).
-  <!--STALLS-->
-* **Resources are stable.** Over twelve lessons forward and back (`nav-loop`), round four's
-  counts go from 249 geometries, 16 textures, 27 shader programs and 71 MB of JS heap to 254, 22,
-  35 and 95 MB (round three: 174, 15, 27, 71 MB to 332, 21, 35, 90 MB); the new materials add
-  about three shader programs to a lesson.
-* **Watch** covered 31.8 s of film in a minute of wall clock (round three 41.7 s): the film now
+* **Moves.** In the middle of the moves between lessons the longest frames are shorter or gone
+  (the navigation loop 6.9 → 0.3 s, the layers' toggles 6.9 → 2.2 s, the explorer's
+  demonstration 1.9 → 0.6 s; the moves to the post-exposure bake and to the developer 1.7 and
+  1.0 s → none), but with frames this slow a move spans only a few of them, so that column says
+  less than it did in round three. The long blocks come while the picture is held for a machine
+  being prepared, and they are longer than round three's (the navigation loop 4.3 → 9.7 s, the
+  layers 7.0 → 11.6 s, the explorer's move to the etch cluster 0.8 → 3.1 s, Watch
+  2.5 → 7.9 s). Elsewhere, frames are simply slower while the camera moves (following the
+  process in the coat lesson: 3.0 s; the phone's explorer view of the fab 0.4 → 0.8 s).
+* **Shader programs compiled during moves** (`scripts/programs.mjs`: every program link, every
+  call that blocked the page for over 15 ms after it, and whether the camera was moving; real
+  time, one run at a time on an idle machine). From the CD-SEM to the etch cluster (`--step
+  adi`): round three links one shadow depth program in the middle of the move in (1.3 and
+  2.5 s blocks in two runs); this round before its fix linked two (the first a 12.7 s block,
+  measured under load); the final build links none and has no long task, in two runs, the move
+  taking 3.0–3.5 s. From the inspection tool to the wet clean (`--step transfer`): all builds
+  link the same two small programs of the wet clean's preparation (compiled in parallel,
+  nothing blocked for over 15 ms) in the last 0.1 s of the move; the longest task in the whole
+  run was 0.27 s on round three's build and 0.18 s on the final build.
+* **Resources.** At the end of each scenario round four holds more geometries (the lit housings
+  are more, smaller meshes: the home view 72 → 374), 2–7 more textures and 0–5 more shader
+  programs, and about the same JS heap (−18 to +3 MB). The real-time `nav-loop` is not a leak
+  check: its counts at the end depend on which machines are still loaded when it stops (in two
+  runs of this build 254 and 605 geometries; of round three's, 332 and 451). The check is
+  `e2e/continuity.spec.ts` "going back and forth through the lessons does not accumulate GPU
+  resources": the same loop twice, frame by frame, the second adding at most 10 % geometries,
+  4 textures and 2 programs.
+* **Watch** covered 33.6 s of film in a minute of wall clock (round three 43.1 s): the film now
   stops its clock and narration while a machine it needs is being prepared (see *Continuity*),
   which on this renderer happens often; round three played the sound on over a held picture.
 * A fresh load of the explorer's scanner view keeps the page busy for 4–8 s before it answers
@@ -694,7 +742,20 @@ as described in [`docs/ROUND3.md`](ROUND3.md#measure-it-on-your-hardware).
 
 ## Verification: commands and results
 
-<!--VERIFY-RESULTS-->
+On the final build — application code at `0e35bcf`; the commits after it on the branch add
+only this document's results — on the machine described under *Method*:
+
+| command | result |
+|---|---|
+| `npm run typecheck` | passes (`tsc -b`: the app, the unit tests, and the Playwright specs and configs; no errors) |
+| `npm test` | 58 tests in 5 files pass: round three's 42, and 16 new in `src/three/stage/round4.test.ts` (section cuts, camera routes, the room, reveal in place, the lithography cell) |
+| `npm run build` | succeeds (`tsc -b && vite build`, about 1.3 s for vite): the site is 43 files, 2.4 MB, listed with their sha256 in `dist/app-files.json`; with the film's narration (4.5 MB) the offline download is still about 7 MB |
+<!--E2E-RESULT-->
+| `node scripts/perf.mjs <base> <out.json> --label …`, round three's build and this one | the tables in [Real-time playback](#real-time-playback-software-rendering) |
+| `node scripts/programs.mjs <base> --step adi` and `--step transfer`, both builds | shader programs during moves, same section |
+| `node scripts/stills.mjs <base> scripts/round4/stills-desktop.json <dir>` (and `stills-phone.json`), `scripts/frames.mjs`, `node scripts/record.mjs scripts/recordings/r4-0N-….json` | the stills, frame sequences and clips in `docs/recordings/round4/` |
+
+<!--E2E-HISTORY-->
 
 **New tests this round**, and where each requirement of the brief is covered (the round-three
 tests named here still pass on this round's build):
@@ -704,7 +765,7 @@ tests named here still pass on this round's build):
 | machines closed from outside, opened deliberately; silhouette and anchors consistent | `e2e/round4.spec.ts` "a machine is shown closed from outside, opens as the camera moves in, and its chamber opens after it" (frame by frame: ≥ 8 frames held on the closed machine, the opening never decreasing, the chamber cut only once the housing is open); "each machine of the lithography loop keeps its parts and your wafer inside its housing's outline" (track, scanner, etch, deposition, polisher); `round4.test.ts` section cuts (a closed wedge cuts nothing, an open one exactly its sector, for plain, turned and mirrored chambers; the lid wipes from the front) |
 | continuous wafer and moving parts, prime → coat → soft bake and align → expose | `round3.test.ts` "track: one wafer, carried" (five tests) and "scanner: the stages move, they never jump", on this round's module positions; `e2e/continuity.spec.ts` "the track carries the wafer from module to module (no teleporting)"; `round4.test.ts` the lithography cell (process order west to east, carrier and interface ends, every carry ≤ 0.7 m, the scanner east of the track, the immersion gap) |
 | exterior ↔ interior and machine ↔ wafer ↔ die ↔ layers, both ways, with interruption | `round4.spec.ts` the closed-first test; `round4.test.ts` "into the layers and back, at a machine whose wafer is not in view" (reveal in place; back along the line of sight); `continuity.spec.ts` "reversing the cross-section fade at any point never jumps; the latest request wins", "rising out of the layers to leave for another machine, your die fades in (no pop)" |
-| the camera through free space | `round4.spec.ts` "the camera travels through free space and never shows a blank frame" (STI etch → STI fill, dice → attach: the camera's path ray-cast between frames, every frame's luminance spread > 6, no one-frame jump); `round4.test.ts` "camera routes" and "the room" (back out along the line of sight; a direct move in; establishing shots over the aisle and under the ceiling with a lens that keeps the framing; a narrow screen's fit inside the room; the etch → polisher move under the ceiling throughout) |
+| the camera through free space | `round4.spec.ts` "the camera travels through free space and never shows a blank frame" (STI etch → STI fill, dice → attach, CD-SEM → gate etch: the camera's path ray-cast between frames, every frame's luminance spread > 6, no one-frame jump); `round4.test.ts` "camera routes" and "the room" (back out along the line of sight; a direct move in; between machines facing each other across the aisle, a pan that never looks steeper than its two framings; establishing shots over the aisle and under the ceiling with a lens that keeps the framing; a narrow screen's fit inside the room; the etch → polisher move under the ceiling throughout); `scripts/probe.mjs --cases transitions` (every lesson-to-lesson move of the course, frame by frame) |
 | readiness, failure, rapid navigation | `e2e/loading.spec.ts` (four tests: a late machine, changing your mind while one loads, a machine that fails, the first picture only when ready); `e2e/modes.spec.ts` "rapid navigation: the last request wins and no stale camera move completes"; `round4.spec.ts` "the last lesson loads in a fresh browser without the page freezing" |
 | Watch: pause, seek, narration during a slow load | `round4.spec.ts` "Watch: the narration waits for a machine that is still loading, and carries on where it stopped" (harness clock) and "Watch, with its narration (real time): Play or a seek during a hold does not start the narration; a background tab plays it on" (the track's module held at the network: the narration silent and the clock still through the wait, *Play* and a seek; playing on in a background tab; waiting again on return; running once the track is in); `e2e/film-continuity.spec.ts` (seek = play, chapter jumps); `e2e/watch.spec.ts` (the narration clock through pause, seek, speed, mute, a background tab) |
 | reduced motion | `round4.spec.ts` "reduced motion: a machine and its chamber open at once, without a moving cut"; `continuity.spec.ts` "reduced motion: moves become still cross-fades, and still nothing jumps" |
