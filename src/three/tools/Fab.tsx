@@ -30,6 +30,7 @@ import { MACHINE_INFO } from '../../content/machines';
 import type { MachineId } from '../../state/nav';
 import { Label } from '../labels';
 import { stationBoxes, stationMatrix } from '../stage/anchors';
+import { queueShadowPrewarm } from '../stage/shadowPrewarm';
 import { stageTime } from '../stage/time';
 import { TOOL_POSES } from '../poses';
 import { HOUSING_SHARE, innerOpening, sectionMaterial as cutMaterial } from '../kit/section';
@@ -1684,6 +1685,8 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
         warmMaterials.push(cm);
       });
       gl.compileAsync(warm, camera, scene).catch(() => {});
+      // (round four) and the programs their shadows are drawn with (two-sided, as opened)
+      queueShadowPrewarm(warm);
     };
     const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
     const h = idle ? idle(run, { timeout: 4000 }) : window.setTimeout(run, 1500);

@@ -367,6 +367,42 @@ test('Watch: the narration waits for a machine that is still loading, and carrie
   expect(errors.filter((e) => !/Track-|dynamically imported module|net::ERR_FAILED/i.test(e))).toEqual([]);
 });
 
+test('no shader program is compiled in the middle of a move: arriving at the etch cluster, housing and chamber opening', async ({ page }, info) => {
+  onlyDesktop(info.project.name);
+  test.setTimeout(900_000);
+  const errors = watchErrors(page);
+  // every program link, and whether the camera was moving then (a compile there stalls the move:
+  // seconds on this renderer); round four opens the housing and the chamber on the way in, and
+  // their shadows' depth programs were compiled there until they were prepared with the model
+  await page.addInitScript(() => {
+    const links: { flying: boolean }[] = [];
+    (window as unknown as { __links: typeof links }).__links = links;
+    const P = WebGL2RenderingContext.prototype;
+    const link = P.linkProgram;
+    P.linkProgram = function (p: WebGLProgram) {
+      const f = (window as unknown as { __fab?: { useStageInfo: { getState: () => { flying: boolean } } } }).__fab;
+      links.push({ flying: !!f?.useStageInfo.getState().flying });
+      return link.call(this, p);
+    };
+  });
+  await freshStart(page, '/?step=adi&virt=1');
+  await settle(page);
+  const before = await page.evaluate(() => (window as unknown as { __links: unknown[] }).__links.length);
+  await page.evaluate(() => (window as unknown as W).__fabStores.useApp.getState().next());
+  let moved = false;
+  for (let i = 0; i < 600; i++) {
+    await advance(page, 2);
+    const s = await stageInfo(page);
+    if (s.flying) moved = true;
+    else if (moved) break;
+  }
+  expect(moved, 'the camera moved to the etch cluster').toBe(true);
+  await advance(page, 60);
+  const links = await page.evaluate((n) => (window as unknown as { __links: { flying: boolean }[] }).__links.slice(n), before);
+  expect(links.filter((l) => l.flying).length, 'programs compiled while the camera moved').toBe(0);
+  expect(errors).toEqual([]);
+});
+
 test('the last lesson loads in a fresh browser without the page freezing', async ({ browserName }, info) => {
   onlyDesktop(info.project.name);
   test.skip(browserName !== 'chromium', 'a Chromium renderer deadlock');

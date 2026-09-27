@@ -30,6 +30,7 @@ import { DeviceScene, deviceProgramStandIns } from './device/DeviceScene';
 import { deviceMeshes } from './device/deviceGeometry';
 import { LabelSpaceContext } from './labels';
 import { failedStations, readyStations, stationBoxes, stationCentre, stationGroups, toolMatrix, waferRegistry } from './stage/anchors';
+import { queueShadowPrewarm, runShadowPrewarm } from './stage/shadowPrewarm';
 import { StationContext } from './stage/context';
 import { BeatLabels } from './stage/BeatLabels';
 import { Director, directorView } from './stage/Director';
@@ -374,6 +375,8 @@ function prewarm(gl: THREE.WebGLRenderer, group: THREE.Object3D, camera: THREE.C
     });
   const shared = !sharedWarmed.has(gl);
   sharedWarmed.add(gl);
+  // (round four) and the programs its shadows are drawn with, after the next frame
+  queueShadowPrewarm(group);
   if (sync) {
     gl.compile(group, camera, scene);
     if (shared) void prewarmShared(gl, camera, scene, true);
@@ -540,12 +543,19 @@ function WorldLighting() {
   const pool = useMemo(() => Array.from({ length: STATION_LIGHT_POOL }, () => new THREE.PointLight('#ffffff', 0)), []);
   useLayoutEffect(() => {
     const was = scene.onBeforeRender;
+    const wasAfter = scene.onAfterRender;
     scene.onBeforeRender = function (...args) {
       applyStationLights(pool, scene);
       was.apply(this, args);
     };
+    // (round four) models' shadow programs, with this frame's render state (shadowPrewarm.ts)
+    scene.onAfterRender = function (...args) {
+      runShadowPrewarm(args[0], args[2]);
+      wasAfter.apply(this, args);
+    };
     return () => {
       scene.onBeforeRender = was;
+      scene.onAfterRender = wasAfter;
     };
   }, [scene, pool]);
   const target = useMemo(() => new THREE.Object3D(), []);
