@@ -149,6 +149,14 @@ export const SHOTS: Partial<Record<StepId, Key[]>> = {
     { p: 0.4, cam: shot('develop') },
     { p: 0.5, cam: section },
   ],
+  // The handler takes the reticle off its shelf in the library (0.15), carries it across to the
+  // reticle stage (to 0.62) and lowers it (0.62–0.72): the camera starts on the library and
+  // follows it across, above the handler's rail, to the stage.
+  reticle: [
+    { p: 0, cam: shot('reticleLib') },
+    { p: 0.2, cam: shot('reticleLib') },
+    { p: 0.56, cam: shot('reticle') },
+  ],
   // The scanner's stages carry the wafer from mark to mark and step and scan it under the lens,
   // fields a few hundredths of a second apart: the camera stays with the machine, then goes
   // down into the layers from there, rather than chasing the wafer on the stage.
