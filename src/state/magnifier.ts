@@ -33,3 +33,10 @@ export const magnifierFrame = {
    */
   draw: null as null | (() => void),
 };
+
+/**
+ * While a machine draws invisible radiation as an overlay (the scanner's 193 nm light path), it
+ * says so here, and the page says so on the picture (ui/Viewport.tsx, `ScaleLabel`): the path
+ * is an explanation, not something anyone at the machine could see.
+ */
+export const useOverlayNote = create<{ note: string | null }>(() => ({ note: null }));

@@ -1073,6 +1073,10 @@ a {
   text-transform: uppercase;
   color: var(--ink-2);
 }
+/* an overlay of invisible radiation, named as such while it is drawn (round four) */
+.scale-label .scale-label__note {
+  color: #5546c9;
+}
 .vp-commands {
   display: flex;
   flex-wrap: wrap;
@@ -1267,7 +1271,7 @@ a {
 .mag {
   position: absolute;
   left: 12px;
-  top: 66px;
+  top: 84px;
   z-index: 3;
   width: 272px;
   margin: 0;

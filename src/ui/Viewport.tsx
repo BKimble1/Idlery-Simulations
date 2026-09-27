@@ -9,6 +9,7 @@ import type { MachineId } from '../state/nav';
 import { CUT_Y } from '../sim/layout';
 import { M } from '../sim/materials';
 import { columnStack } from '../sim/metrology';
+import { useOverlayNote } from '../state/magnifier';
 import { useSimState, useStep } from '../state/sim';
 import { useApp, useClock, type ScaleId } from '../state/store';
 import { LabelLayer } from '../three/labels';
@@ -20,7 +21,27 @@ import { ErrorBoundary, HAS_WEBGL } from './ErrorBoundary';
 import { Magnifier } from './Magnifier';
 import { matColor } from './palette';
 
-const Stage = lazy(() => import('../three/Stage').then((m) => ({ default: m.Stage })));
+/**
+ * The 3D stage's modules are fetched once the page's fonts have loaded and it has painted
+ * (round four). Fetched while the page still waited for its web fonts, the stage's modules
+ * could leave the renderer waiting forever on a fallback-font lookup (seen in headless
+ * Chromium on Linux, on fresh loads: the page froze at random, in up to half of them). The
+ * fonts are small and come first; the wait is bounded.
+ */
+const pageSettled = () =>
+  new Promise<void>((resolve) => {
+    const painted = () => requestAnimationFrame(() => setTimeout(resolve, 0));
+    const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+    if (fonts) fonts.ready.then(painted, painted);
+    else painted();
+    // (slow fonts, or a hidden page, which gets no animation frames)
+    setTimeout(resolve, 1500);
+  });
+const Stage = lazy(() =>
+  pageSettled()
+    .then(() => import('../three/Stage'))
+    .then((m) => ({ default: m.Stage })),
+);
 
 /** Quiet, non-interactive: what scale the picture is at, and how literally to take it. */
 export const SCALE_LABEL: Record<ScaleId, [string, string]> = {
@@ -33,6 +54,9 @@ export const SCALE_LABEL: Record<ScaleId, [string, string]> = {
 export function ScaleLabel() {
   const scale = useStageInfo((s) => s.scale);
   const cutaway = useStageInfo((s) => s.cutaway);
+  const space = useStageInfo((s) => s.space);
+  // (round four) invisible radiation drawn as an explanation says so on the picture
+  const note = useOverlayNote((s) => s.note);
   const [a, b0] = SCALE_LABEL[scale];
   // an opened machine is an illustration's cutaway: nobody sees inside a running tool
   const b = cutaway ? 'cutaway view · covers drawn removed' : b0;
@@ -40,6 +64,7 @@ export function ScaleLabel() {
     <div className="scale-label" data-occludes>
       <b>{a}</b>
       <span>{b}</span>
+      {note && space === 'world' && <span className="scale-label__note">{note}</span>}
     </div>
   );
 }

@@ -1,5 +1,6 @@
+import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
-import { advance, freshStart, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
+import { advance, freshStart, overlaps, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
 
 /**
  * Round four: machines are seen closed first and opened deliberately (the housing as the camera
@@ -58,6 +59,55 @@ test('a machine is shown closed from outside, opens as the camera moves in, and 
   const housingOpenAt = frames.findIndex((f) => f.cut >= 0.62);
   expect(housingOpenAt).toBeGreaterThan(first);
   for (const f of frames.slice(0, housingOpenAt)) expect(inner(f.cut)).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test("each machine of the lithography loop keeps its parts and your wafer inside its housing's outline", async ({ page }, info) => {
+  onlyDesktop(info.project.name);
+  test.setTimeout(900_000);
+  const errors = watchErrors(page);
+  // (the machine, and a lesson at it with its moving parts out)
+  for (const [id, step, p] of [
+    ['track', 'coat', 0.3],
+    ['scanner', 'expose', 0.4],
+    ['etch', 'gate-etch', 0.4],
+    ['depo', 'gatestack', 0.5],
+    ['cmp', 'sti-fill', 0.5],
+  ] as const) {
+    await freshStart(page, `/?step=${step}&virt=1`);
+    await settle(page);
+    await page.evaluate((p) => {
+      const c = (window as unknown as W).__fabStores.useClock.getState();
+      c.set(p);
+      c.pause();
+    }, p);
+    await advance(page, 3);
+    const r = await page.evaluate((id) => {
+      type B = { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } };
+      type O = { visible: boolean; parent: O | null; isMesh?: boolean; name: string; matrixWorld: unknown; geometry?: { boundingBox: B | null; computeBoundingBox(): void }; traverse(f: (o: O) => void): void; updateWorldMatrix(a: boolean, b: boolean): void; getWorldPosition(v: unknown): { x: number; y: number; z: number } };
+      const f = (window as unknown as { __fab: { THREE: { Box3: new () => B & { copy(b: B): B & { applyMatrix4(m: unknown): B } }; Vector3: new () => unknown }; stationGroups: Map<string, O>; stationBoxes: Map<string, B & { containsPoint(p: unknown): boolean }>; waferRegistry: Map<string, O> } }).__fab;
+      const g = f.stationGroups.get(id)!;
+      const house = f.stationBoxes.get(id)!;
+      const out: string[] = [];
+      const tmp = new f.THREE.Box3();
+      g.updateWorldMatrix(true, true);
+      g.traverse((o) => {
+        if (!o.isMesh || !o.geometry) return;
+        for (let q: O | null = o; q; q = q.parent) if (!q.visible) return;
+        if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+        const b = tmp.copy(o.geometry.boundingBox!).applyMatrix4(o.matrixWorld);
+        const over = Math.max(house.min.x - b.min.x, b.max.x - house.max.x, house.min.z - b.min.z, b.max.z - house.max.z, b.max.y - house.max.y);
+        if (over > 0.02) out.push(`${o.name || 'a mesh'} ${over.toFixed(3)} m outside (x ${b.min.x.toFixed(2)}..${b.max.x.toFixed(2)}, y ${b.min.y.toFixed(2)}..${b.max.y.toFixed(2)}, z ${b.min.z.toFixed(2)}..${b.max.z.toFixed(2)})`);
+      });
+      const wafer = f.waferRegistry.get(id);
+      const wp = new f.THREE.Vector3();
+      wafer?.getWorldPosition(wp);
+      return { outside: out, wafer: !!wafer, waferInside: !!wafer && house.containsPoint(wp) };
+    }, id);
+    expect(r.outside, `${id}: parts of the machine outside its housing`).toEqual([]);
+    expect(r.wafer, `${id}: your wafer is in the machine`).toBe(true);
+    expect(r.waferInside, `${id}: your wafer is inside the housing`).toBe(true);
+  }
   expect(errors).toEqual([]);
 });
 
@@ -203,10 +253,21 @@ test('the magnified inset shows the immersion film while the scanner exposes, mo
   const vp = page.viewportSize()!;
   expect(box.x + box.width).toBeLessThanOrEqual(vp.width);
   if (isMobile) expect(box.width).toBeLessThan(200);
+  // the picture says what the drawn path is: an overlay of light nobody could see
+  const note = page.locator('.scale-label__note');
+  await expect(note).toHaveCount(1);
+  await expect(note).toHaveText(/overlay.*193 nm UV is invisible/);
+  if (!isMobile) {
+    await expect(note).toBeVisible();
+    expect(overlaps((await page.locator('.vp-top .scale-label').boundingBox())!, box), 'the inset clears the scale label').toBe(false);
+  }
   // gone once the lesson moves on from the scanner (it holds its last frame: not exposing)
   await page.evaluate(() => (window as unknown as W).__fabStores.useApp.getState().next());
   await advance(page, 3);
   await expect(inset).toHaveCount(0);
+  // and so is the note, once the scanner is no longer the machine in use
+  await settle(page);
+  await expect(note).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -304,6 +365,25 @@ test('Watch: the narration waits for a machine that is still loading, and carrie
   expect(resumedFrom - held[0], 'no time skipped while it waited').toBeLessThan(0.5);
   expect(after.t, 'and it plays on').toBeGreaterThan(resumedFrom);
   expect(errors.filter((e) => !/Track-|dynamically imported module|net::ERR_FAILED/i.test(e))).toEqual([]);
+});
+
+test('the last lesson loads in a fresh browser without the page freezing', async ({ browserName }, info) => {
+  onlyDesktop(info.project.name);
+  test.skip(browserName !== 'chromium', 'a Chromium renderer deadlock');
+  test.setTimeout(300_000);
+  // Fetched while the page still waited for its web fonts, the 3D stage's modules left the
+  // renderer waiting forever on a fallback-font lookup in about half of the fresh loads of this
+  // lesson (every test above reuses a browser that has loaded a page before, so none of them
+  // meets it). Four fresh browsers, in a process of their own: each page must answer.
+  const url = `${info.project.use.baseURL}/?step=final&virt=1`;
+  const args = JSON.stringify(info.project.use.launchOptions?.args ?? []);
+  const out = execFileSync(process.execPath, ['e2e/fresh-load.mjs', url, '4', 'Flip the input', args], { timeout: 240_000 }).toString();
+  const results = JSON.parse(out.trim().split('\n').pop()!) as { answered: boolean; shown: boolean }[];
+  expect(results.length).toBe(4);
+  for (const [i, r] of results.entries()) {
+    expect(r.answered, `fresh load ${i + 1}: the page answers`).toBe(true);
+    expect(r.shown, `fresh load ${i + 1}: the lesson is shown`).toBe(true);
+  }
 });
 
 test('reduced motion: a machine and its chamber open at once, without a moving cut', async ({ page }, info) => {

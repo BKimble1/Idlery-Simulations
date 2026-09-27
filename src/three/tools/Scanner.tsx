@@ -32,7 +32,7 @@ import { Merged } from '../kit/merged';
 import { Wafer, WaferFraming } from '../wafer/Wafer';
 import type { ToolProps } from './index';
 import { useOverlay, usePresentation } from '../../state/presentation';
-import { magnifierFrame, useMagnifier } from '../../state/magnifier';
+import { magnifierFrame, useMagnifier, useOverlayNote } from '../../state/magnifier';
 import {
   APPROACH_FROM,
   BEAM_Y,
@@ -281,6 +281,15 @@ function Frame({ w, d, hole, h, y, m }: { w: number; d: number; hole: number; h:
   );
 }
 
+/**
+ * The light-path overlay (round four): 193 nm light is invisible, so its path is an explanation
+ * drawn over the machine's parts — through the metrology frame and the lens barrel — rather than
+ * a glow hidden behind them; the page labels it while it is shown (`useOverlayNote`).
+ */
+const LIGHT = new THREE.MeshBasicMaterial({ color: '#8f82ff', transparent: true, opacity: 0.4, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+/** Drawn after the machine (the overlay's draw order). */
+const OVERLAY_ORDER = 4;
+
 /** A rectangular frustum between two horizontal slits (for the light-path overlay). */
 function SlitFrustum({ x, y0, y1, w0, w1, d }: { x: number; y0: number; y1: number; w0: number; w1: number; d: number }) {
   const geo = useMemo(() => {
@@ -298,7 +307,7 @@ function SlitFrustum({ x, y0, y1, w0, w1, d }: { x: number; y0: number; y1: numb
     g.computeVertexNormals();
     return g;
   }, [y0, y1, w0, w1, d]);
-  return <mesh geometry={geo} position={[x, 0, 0]} material={MAT.beam} />;
+  return <mesh geometry={geo} position={[x, 0, 0]} material={LIGHT} renderOrder={OVERLAY_ORDER} />;
 }
 
 /** The stage base on its vibration isolators, the metrology frame and the reticle stage's bridge. */
@@ -432,9 +441,9 @@ function MeasureSensors({ spot }: { spot: React.RefObject<THREE.Mesh | null> }) 
           }
         }}
       />
-      <mesh ref={spot} position={[0, WAFER_TOP + 0.02, 0]} visible={false}>
+      <mesh ref={spot} position={[0, WAFER_TOP + 0.02, 0]} visible={false} renderOrder={OVERLAY_ORDER}>
         <cylinderGeometry args={[0.004, 0.012, 0.04, 12, 1, true]} />
-        <meshBasicMaterial color="#ffd27a" transparent opacity={0.5} depthWrite={false} />
+        <meshBasicMaterial color="#ffd27a" transparent opacity={0.5} depthWrite={false} depthTest={false} />
       </mesh>
     </group>
   );
@@ -475,6 +484,16 @@ export default function Scanner({ variant }: ToolProps) {
     useMagnifier.setState({ kind: 'immersion', lightPath });
     return () => useMagnifier.setState({ kind: null });
   }, [live, lightPath]);
+  // the light path is drawn only by the machine the story is at (it is drawn over the machine's
+  // parts, so a scanner elsewhere in the bay must not show it), and the page labels it
+  const presenting = !!pres && !pres.parked;
+  const overlay = presenting && lightPath;
+  useEffect(() => {
+    if (!overlay) return;
+    // (the alignment sensor's light is not the exposure's 193 nm)
+    useOverlayNote.setState({ note: aligning ? 'light path: an overlay' : 'light path: an overlay · 193 nm UV is invisible' });
+    return () => useOverlayNote.setState({ note: null });
+  }, [overlay, aligning]);
 
   useProgressFrame((p) => {
     stageBases(v, p, bases.ours, bases.other);
@@ -500,12 +519,12 @@ export default function Scanner({ variant }: ToolProps) {
         const m = markPose(p, 0.1, 0.8);
         x = m.x;
         z = m.z;
-        if (alignSpot.current) alignSpot.current.visible = m.dwell && lightPath;
+        if (alignSpot.current) alignSpot.current.visible = m.dwell && overlay;
       }
       exposeStage.current.position.set(x, 0, z);
       // the slit (invisible 193 nm light) only with the light-path overlay
-      if (slit.current) slit.current.visible = scanning && lightPath;
-      if (beam.current) beam.current.visible = lightPath && (exposing ? scanning || p < APPROACH_FROM || p > EXPOSE_TO : true);
+      if (slit.current) slit.current.visible = scanning && overlay;
+      if (beam.current) beam.current.visible = overlay && (exposing ? scanning || p < APPROACH_FROM || p > EXPOSE_TO : true);
       if (live) {
         magnifierFrame.waferZ = z;
         magnifierFrame.exposing = scanning;
@@ -577,9 +596,9 @@ export default function Scanner({ variant }: ToolProps) {
         </group>
       </group>
       {/* the slit of light on the wafer during a scan: part of the light-path overlay */}
-      <mesh ref={slit} position={[LENS_X, WAFER_TOP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={3}>
+      <mesh ref={slit} position={[LENS_X, WAFER_TOP + 0.0006, 0]} rotation={[-Math.PI / 2, 0, 0]} visible={false} renderOrder={OVERLAY_ORDER}>
         <planeGeometry args={[(WAFER.dieW * 2) / 1000, 0.006]} />
-        <meshBasicMaterial color="#cfc8ff" transparent opacity={0.85} depthWrite={false} />
+        <meshBasicMaterial color="#cfc8ff" transparent opacity={0.85} depthWrite={false} depthTest={false} />
       </mesh>
       {/* reticle stage: a frame with an opening under the reticle for the light */}
       <group position={[LENS_X, RETICLE_Y, 0]}>
@@ -618,15 +637,17 @@ export default function Scanner({ variant }: ToolProps) {
       </StandaloneOnly>
       {/* educational light path overlay (193 nm UV is invisible in reality) */}
       <group ref={beam} visible={false}>
-        <mesh position={[LENS_X, BEAM_Y, (BULKHEAD_Z + ILLUM.z0) / 2]} rotation={[Math.PI / 2, 0, 0]} material={MAT.beam}>
+        <mesh position={[LENS_X, BEAM_Y, (BULKHEAD_Z + ILLUM.z0) / 2]} rotation={[Math.PI / 2, 0, 0]} material={LIGHT} renderOrder={OVERLAY_ORDER}>
           <boxGeometry args={[0.024, ILLUM.z0 - BULKHEAD_Z, 0.024]} />
         </mesh>
         {/* shaped slit of light onto the reticle (drawn 4× the printed slit) */}
-        <mesh position={[LENS_X, RETICLE_Y + 0.06, 0]} material={MAT.beam}>
+        <mesh position={[LENS_X, RETICLE_Y + 0.06, 0]} material={LIGHT} renderOrder={OVERLAY_ORDER}>
           <boxGeometry args={[0.104, 0.08, 0.012]} />
         </mesh>
-        {/* from the reticle into the lens, and out of the lens onto the wafer: 4× smaller */}
+        {/* from the reticle into the lens, through it (schematic: drawn over the barrel), and out
+            of the lens onto the wafer: 4× smaller */}
         <SlitFrustum x={LENS_X} y0={RETICLE_Y - 0.01} y1={LENS_TOP} w0={0.104} w1={0.07} d={0.012} />
+        <SlitFrustum x={LENS_X} y0={LENS_TOP} y1={LENS_Y0 + 0.02} w0={0.07} w1={0.034} d={0.009} />
         <SlitFrustum x={LENS_X} y0={LENS_Y0 + 0.02} y1={WAFER_TOP} w0={0.034} w1={0.026} d={0.006} />
       </group>
     </group>

@@ -584,7 +584,8 @@ function Undercarriage() {
       <Cyl r={0.05} h={0.1} position={[0, 0.77, 0]} m="steelSatin" />
       <Cyl r={0.08} h={0.2} position={[0, 0.61, 0]} m="black" />
       <Frame />
-      <Pipe pts={[[0.2, 0.83, 0.1], [0.34, 0.83, 0.1], [0.34, 0.08, 0.1]]} r={0.028} bend={0.06} m="steelSatin" />
+      {/* (round four: kept inside the housing, which the side chambers' pipes poked through) */}
+      <Pipe pts={[[0.2, 0.83, 0.1], [0.25, 0.83, 0.1], [0.25, 0.08, 0.1]]} r={0.028} bend={0.04} m="steelSatin" />
     </group>
   );
 }
@@ -678,7 +679,7 @@ function ActiveChamberParts({
       <Cyl r={0.08} h={0.18} position={[0, 0.6, 0]} m="black" />
       <group userData={{ whole: true }}>
         <Frame />
-        <Pipe pts={[[-0.2, 0.83, -0.12], [-0.36, 0.83, -0.12], [-0.36, 0.08, -0.12]]} r={0.028} bend={0.06} m="steelSatin" />
+        <Pipe pts={[[-0.2, 0.83, -0.12], [-0.27, 0.83, -0.12], [-0.27, 0.08, -0.12]]} r={0.028} bend={0.04} m="steelSatin" />
       </group>
     </group>
   );
