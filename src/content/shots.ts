@@ -131,20 +131,20 @@ export const SHOTS: Partial<Record<StepId, Key[]>> = {
     { p: 0.08, cam: shot('coat') },
     { p: 0.18, cam: shot('bake') },
   ],
-  // back from the scanner: the robot sets the wafer on the hot plate, then down into the layers
-  // before the lid closes (0.3), from the plate itself: framed from above, the raised lid and
-  // its exhaust would fill the view
+  // back from the scanner: the robot sets the wafer on the post-exposure-bake plate beside the
+  // interface, then down into the layers before the lid closes (0.3), from the plate itself:
+  // framed from above, the raised lid and its exhaust would fill the view
   peb: [
-    { p: 0, cam: shot('bake') },
-    { p: 0.14, cam: shot('bake') },
+    { p: 0, cam: shot('peb') },
+    { p: 0.14, cam: shot('peb') },
     { p: 0.26, cam: section },
   ],
   // onto the develop cup; the camera holds on the cup while the dispense bar lays the puddle
   // across the wafer (0.23–0.43: framed closer, the bar would sweep across the lens), then goes
   // down into the layers as the exposed resist dissolves
   develop: [
-    { p: 0, cam: shot('bake') },
-    { p: 0.07, cam: shot('bake') },
+    { p: 0, cam: shot('peb') },
+    { p: 0.07, cam: shot('peb') },
     { p: 0.15, cam: shot('develop') },
     { p: 0.4, cam: shot('develop') },
     { p: 0.5, cam: section },

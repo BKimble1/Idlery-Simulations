@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STEPS } from '../../content/steps';
 import { BRIDGED } from '../tools';
-import { FORK_Z, makeFrame, REST, ROUTES, spinProfile, transfer, XCHG } from '../tools/trackMotion';
+import { FORK_Z, makeFrame, MODS, REST, ROUTES, spinProfile, transfer, XCHG } from '../tools/trackMotion';
 import { exposurePose, FIELD_M, makeExposurePose, markPose, stageBases } from '../tools/scannerMotion';
 import { handoverAt, type Leg } from './flights';
 import { initialTier } from './quality';
@@ -25,7 +25,7 @@ describe('track: one wafer, carried', () => {
       expect(Math.abs(end.x - start.x), `${pair}: the robot`).toBeLessThan(1e-9);
       expect(end.forkZ).toBe(FORK_Z);
       expect(start.forkZ).toBe(FORK_Z);
-      for (const m of ['bake', 'coat', 'develop', 'prime'] as const) {
+      for (const m of MODS) {
         expect(end.lift[m]).toBe(0);
         expect(start.lift[m]).toBe(0);
       }
@@ -79,7 +79,7 @@ describe('track: one wafer, carried', () => {
         const dt = dp * dur;
         carriage = Math.max(carriage, Math.abs(f.x - prev.x) / dt);
         fork = Math.max(fork, Math.abs(f.forkZ - prev.z) / dt);
-        for (const m of ['bake', 'coat', 'develop', 'prime'] as const) lift = Math.max(lift, (Math.abs(f.lift[m] - prev.lift[m]) * (XCHG[m] - REST[m])) / dt);
+        for (const m of MODS) lift = Math.max(lift, (Math.abs(f.lift[m] - prev.lift[m]) * (XCHG[m] - REST[m])) / dt);
         prev = { x: f.x, z: f.forkZ, lift: { ...f.lift } };
       }
       // metres per second; the lessons leave a transfer 1–2.5 s, so the carriage and fork run

@@ -24,18 +24,33 @@ export function trapezoid(t: number, a = 0.25): number {
   return v * (a / 2 + (x - a));
 }
 
-export const MOD_X = { bake: -0.7, coat: 0, develop: 0.7, prime: 1.4 } as const;
+/**
+ * Module positions along the process line (tool frame, m). Round four: the line runs as the
+ * bay model does — the carrier block and its load ports at the west end (−x), the interface
+ * block at the east end, against the scanner — in process order: vapour prime, coat, soft-bake
+ * plate, develop, and the post-exposure-bake plate beside the interface (tracks bake exposed
+ * wafers close to the scanner, so the delay before the bake stays short and constant). No
+ * carry between modules is longer than 0.7 m.
+ */
+export const MOD_X = { prime: -1.1, coat: -0.4, bake: 0.3, develop: 1.0, peb: 1.7 } as const;
 export type Mod = keyof typeof MOD_X;
+export const MODS = Object.keys(MOD_X) as Mod[];
 export const DECK_Y = 0.88;
 /** The carrier block (wafers come out of their pod here) and the scanner interface block. */
-export const CARRIER_X = 1.95;
-export const IFACE_X = -1.15;
+export const CARRIER_X = -1.75;
+export const IFACE_X = 2.35;
 /** Wafer centre on the retracted fork: the robot runs along the front of the modules. */
 export const FORK_Z = 0.3;
 /** Wafer height at rest: on a hot plate's proximity pins, or on a spin chuck in its cup. */
-export const REST: Record<Mod, number> = { bake: DECK_Y + 0.031, prime: DECK_Y + 0.031, coat: DECK_Y + 0.052, develop: DECK_Y + 0.052 };
+export const REST: Record<Mod, number> = { bake: DECK_Y + 0.031, peb: DECK_Y + 0.031, prime: DECK_Y + 0.031, coat: DECK_Y + 0.052, develop: DECK_Y + 0.052 };
 /** Wafer height for an exchange: lifted on pins, or the chuck raised above the cup's rim. */
-export const XCHG: Record<Mod, number> = { bake: REST.bake + 0.014, prime: REST.prime + 0.014, coat: REST.coat + 0.075, develop: REST.develop + 0.075 };
+export const XCHG: Record<Mod, number> = {
+  bake: REST.bake + 0.014,
+  peb: REST.peb + 0.014,
+  prime: REST.prime + 0.014,
+  coat: REST.coat + 0.075,
+  develop: REST.develop + 0.075,
+};
 
 /** Where a lesson's wafer comes from and which module it is processed in. */
 export interface Route {
@@ -58,8 +73,8 @@ export const ROUTES: Partial<Record<StepId, Route>> = {
   prime: { start: CARRIER_X, from: CARRIER_X, fromMod: null, to: 'prime', park: parkBy('prime'), window: 0.16 },
   coat: { start: parkBy('prime'), from: MOD_X.prime, fromMod: 'prime', to: 'coat', park: parkBy('coat'), window: 0.2 },
   softbake: { start: parkBy('coat'), from: MOD_X.coat, fromMod: 'coat', to: 'bake', park: parkBy('bake'), window: 0.26 },
-  peb: { start: IFACE_X, from: IFACE_X, fromMod: null, to: 'bake', park: parkBy('bake'), window: 0.14 },
-  develop: { start: parkBy('bake'), from: MOD_X.bake, fromMod: 'bake', to: 'develop', park: parkBy('develop'), window: 0.22 },
+  peb: { start: IFACE_X, from: IFACE_X, fromMod: null, to: 'peb', park: parkBy('peb'), window: 0.14 },
+  develop: { start: parkBy('peb'), from: MOD_X.peb, fromMod: 'peb', to: 'develop', park: parkBy('develop'), window: 0.22 },
 };
 
 const ramp = (u: number, a: number, b: number) => ease(seg(u, a, b));
@@ -84,7 +99,7 @@ export function transfer(r: Route, p: number, out: XferFrame): XferFrame {
   const u = seg(p, 0, r.window);
   const dst = r.to;
   const lift = out.lift;
-  lift.bake = lift.coat = lift.develop = lift.prime = 0;
+  for (const m of MODS) lift[m] = 0;
   // (backing off to park may run on past the transfer's share of the lesson: the robot is
   // only leaving, and squeezed into the last tenth it would dash off at several metres a second)
   const park = trapezoid(seg(p / r.window, 0.9, 1.2));
@@ -131,7 +146,7 @@ export function transfer(r: Route, p: number, out: XferFrame): XferFrame {
   return out;
 }
 
-export const makeFrame = (): XferFrame => ({ x: 0, forkZ: FORK_Z, forkY: DECK_Y + 0.06, wafer: [0, 0, 0], onFork: false, lift: { bake: 0, coat: 0, develop: 0, prime: 0 } });
+export const makeFrame = (): XferFrame => ({ x: 0, forkZ: FORK_Z, forkY: DECK_Y + 0.06, wafer: [0, 0, 0], onFork: false, lift: { bake: 0, peb: 0, coat: 0, develop: 0, prime: 0 } });
 
 /**
  * A spin profile (ramp up, hold, ramp down) as an angle at progress p, integrated analytically

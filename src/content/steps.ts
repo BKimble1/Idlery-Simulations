@@ -414,7 +414,7 @@ export const STEPS: Record<StepId, StepContent> = {
     changes: 'The latent image becomes a sharp chemical difference the developer can read.',
     why: 'Deep-UV resists are chemically amplified: the [[peb|post-exposure bake]] does most of the chemistry.',
     scene: 'track',
-    variant: 'bake',
+    variant: 'peb',
     view: 'device',
     duration: 8,
     realTime: 'About a minute',

@@ -62,11 +62,11 @@ export interface LiveCoat {
   edgeRise: number;
   /** Extra thickness toward the rim while still flowing (0..1). */
   rim: number;
-  /** Edge-bead removal has cleared the outer ring. */
-  ebr: boolean;
+  /** Edge-bead removal: how much of the 2.2 mm edge ring the solvent has cleared (0..1). */
+  ebr: number;
 }
 
-export const makeLiveCoat = (): LiveCoat => ({ on: false, coverage: 0, nm: 0, edgeRise: 0, rim: 0, ebr: false });
+export const makeLiveCoat = (): LiveCoat => ({ on: false, coverage: 0, nm: 0, edgeRise: 0, rim: 0, ebr: 0 });
 
 /** What a live film is made of: its material, label (a film with the same label below it
  * grows thicker instead of stacking) and the thickest it gets, nm. Resist by default. */
@@ -142,7 +142,7 @@ if (uCoatOn > 0.5) {
     float r = u * ${R_MM};
     float ue = min(1.0, r / ${(WAFER.radius - WAFER.edgeExclusion).toFixed(1)});
     float nm = uCoat.y * (1.0 + uCoat.z * ue * ue * ue) * (1.0 + uCoat.w * pow(u, 6.0) * 2.5);
-    if (uEbr > 0.5 && r > ${(WAFER.radius - 2.2).toFixed(1)}) nm = 0.0;
+    if (uEbr > 0.0 && r > ${WAFER.radius.toFixed(1)} - 2.2 * uEbr) nm = 0.0;
     vec3 k = (uPuddleOn > 0.5 && nm > uLutMax) ? uPuddle : texture2D(uLut, vec2(clamp(nm / uLutMax, 0.0, 1.0) * ${((LUT_N - 1) / LUT_N).toFixed(6)} + ${(0.5 / LUT_N).toFixed(6)}, 0.5)).rgb;
     diffuseColor.rgb *= k;
   }
@@ -260,7 +260,7 @@ export function Wafer({
   const r = look.summary.resist;
   const resist = !live && r && r.phase !== 'developed' ? r : null;
   const settled = useMemo<LiveCoat | null>(
-    () => (resist ? { on: true, coverage: 1, nm: resist.nm, edgeRise: resist.edgeRise, rim: 0, ebr: true } : null),
+    () => (resist ? { on: true, coverage: 1, nm: resist.nm, edgeRise: resist.edgeRise, rim: 0, ebr: 1 } : null),
     [resist?.nm, resist?.edgeRise], // eslint-disable-line react-hooks/exhaustive-deps
   );
   if (resist) look = { ...look, summary: { ...look.summary, resist: null } };
@@ -282,7 +282,7 @@ export function Wafer({
     uniforms.uCoatOn.value = on ? 1 : 0;
     if (on && coat && lut) {
       uniforms.uCoat.value.set(coat.coverage, coat.nm, coat.edgeRise, coat.rim);
-      uniforms.uEbr.value = coat.ebr ? 1 : 0;
+      uniforms.uEbr.value = coat.ebr;
       uniforms.uLut.value = lut.tex;
       uniforms.uLutMax.value = liveFilm.max;
       uniforms.uPuddleOn.value = liveFilm.mat === M.RES ? 1 : 0;
