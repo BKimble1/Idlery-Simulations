@@ -1,0 +1,10 @@
+{
+  "viewport": [1280, 800],
+  "dpr": 1,
+  "query": "quality=low",
+  "groups": [
+    { "name": "explore-track", "path": "/?explore=track" },
+    { "name": "coat", "path": "/?step=coat", "points": [0.03, 0.12, 0.27, 0.36, 0.86] },
+    { "name": "develop", "path": "/?step=develop", "points": [0.3, 0.45] }
+  ]
+}

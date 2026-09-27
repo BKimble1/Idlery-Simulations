@@ -1,0 +1,11 @@
+{
+  "viewport": [1280, 800],
+  "dpr": 1,
+  "query": "quality=low",
+  "groups": [
+    { "name": "coat", "path": "/?step=coat", "points": [0.27] },
+    { "name": "expose", "path": "/?step=expose", "points": [0.4] },
+    { "name": "explore-scanner", "path": "/?explore=scanner" },
+    { "name": "gate-etch", "path": "/?step=gate-etch", "points": [0.3] }
+  ]
+}

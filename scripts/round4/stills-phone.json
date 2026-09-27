@@ -1,0 +1,13 @@
+{
+  "viewport": [390, 844],
+  "dpr": 2,
+  "touch": true,
+  "query": "quality=low",
+  "groups": [
+    { "name": "phone-home", "path": "/" },
+    { "name": "phone-coat", "path": "/?step=coat", "points": [0.3] },
+    { "name": "phone-expose", "path": "/?step=expose", "points": [0.4] },
+    { "name": "phone-gate-etch", "path": "/?step=gate-etch", "points": [0.3] },
+    { "name": "phone-explore-scanner", "path": "/?explore=scanner" }
+  ]
+}
