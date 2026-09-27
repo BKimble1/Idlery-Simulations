@@ -150,6 +150,48 @@ describe('camera routes: through free space (round four)', () => {
     legs[3].eval(1, s);
     expect(s.a.pos.distanceTo(to.pos)).toBeLessThan(1e-6);
   });
+
+  it('between machines that face each other across the aisle the camera pans round, never down at the floor (CD-SEM → etch)', () => {
+    // the machines' footprints as the bay builds them (min, max; metres)
+    stationBoxes.set('metrology', new THREE.Box3(new THREE.Vector3(-2.55, 0, 1.6), new THREE.Vector3(0.35, 2.3, 4.05)));
+    stationBoxes.set('etch', new THREE.Box3(new THREE.Vector3(-2.2, 0, -5.86), new THREE.Vector3(0.81, 2.65, -1.6)));
+    try {
+      // the CD-SEM lesson's last framing, from the far side of the aisle, and the etch cluster's
+      // establishing shot, from the other side: they look in opposite directions from 2 m apart
+      // (moving the point looked at in a straight line swept it under the camera, which looked
+      // 66° down at the floor half-way)
+      const from = pose([-2.26, 2.4, -0.44], [-1.62, 1.25, 2.7]);
+      const to = machinePose('etch', makePose());
+      const legs = planTransition(from, () => to, { from: 'metrology', to: 'etch', establish: true, reduced: false, fit: () => {} });
+      const pitch = (p: CamPose) => Math.asin((p.target.y - p.pos.y) / p.pos.distanceTo(p.target));
+      const heading = (p: CamPose) => Math.atan2(p.target.x - p.pos.x, p.target.z - p.pos.z);
+      const steepest = Math.min(pitch(from), pitch(to));
+      const total = legs.reduce((t, l) => t + l.dur, 0);
+      const s = makeSample();
+      let prev: number | null = null;
+      let turn = 0;
+      let turned = 0;
+      for (let t = 0; t <= total + 1e-9; t += 1 / 60) {
+        evalLegs(legs, t, s);
+        const at = `t = ${t.toFixed(2)} s`;
+        expect(pitch(s.a), at).toBeGreaterThanOrEqual(steepest - 1e-6);
+        expect(s.a.pos.y, at).toBeLessThanOrEqual(ROOM.ceiling + 1e-6);
+        const h = heading(s.a);
+        if (prev !== null) {
+          const d = ((h - prev + 3 * Math.PI) % (2 * Math.PI)) - Math.PI;
+          if (Math.abs(d) > 1e-9) {
+            if (!turn) turn = Math.sign(d);
+            expect(Math.sign(d), `${at}: the view turns one way only`).toBe(turn);
+            turned += d;
+          }
+        }
+        prev = h;
+      }
+      expect(Math.abs(turned), 'a pan of more than a quarter turn').toBeGreaterThan(Math.PI / 2);
+    } finally {
+      stationBoxes.clear();
+    }
+  });
 });
 
 describe('the room: cameras among the machines stay over the aisle and under the ceiling (round four)', () => {

@@ -320,6 +320,58 @@ export function lerpPose(a: CamPose, b: CamPose, t: number, out: CamPose): CamPo
   return out;
 }
 
+const va = new THREE.Vector3();
+const vb = new THREE.Vector3();
+
+/**
+ * Which way (±1, about the vertical) a move from `a` to `b` turns the camera around, or 0 if it
+ * does not: its horizontal view turns by more than 90°.
+ */
+export function turnAround(a: CamPose, b: CamPose): -1 | 0 | 1 {
+  va.subVectors(a.target, a.pos).setY(0);
+  vb.subVectors(b.target, b.pos).setY(0);
+  if (va.lengthSq() < 1e-8 || vb.lengthSq() < 1e-8 || va.dot(vb) >= 0) return 0;
+  return va.x * vb.z - va.z * vb.x > 0 ? -1 : 1;
+}
+
+/** How far (radians, 0..π) the horizontal view turns from `a` to `b`. */
+export function headingChange(a: CamPose, b: CamPose): number {
+  va.subVectors(a.target, a.pos).setY(0);
+  vb.subVectors(b.target, b.pos).setY(0);
+  if (va.lengthSq() < 1e-8 || vb.lengthSq() < 1e-8) return 0;
+  return va.angleTo(vb);
+}
+
+/**
+ * `lerpPose` for a move that turns the camera around (round four), turning the view about the
+ * vertical — its heading the way `turn` says (see turnAround), its pitch and the distance to what
+ * it looks at in proportion — while the camera moves as in lerpPose. Framings of machines that
+ * face each other across the aisle look in opposite directions from a few metres apart: moving
+ * the point looked at in a straight line swept it under the camera, which looked straight down
+ * at the floor half-way (the CD-SEM to the etch cluster). The camera now pans across the aisle.
+ */
+export function turnPose(a: CamPose, b: CamPose, t: number, turn: -1 | 1, out: CamPose): CamPose {
+  lerpPose(a, b, t, out);
+  va.subVectors(a.target, a.pos);
+  vb.subVectors(b.target, b.pos);
+  const la = va.length();
+  const lb = vb.length();
+  if (la < 1e-6 || lb < 1e-6) return out;
+  const ya = Math.atan2(va.x, va.z);
+  // the heading's change, taken the way `turn` goes (a quarter turn to a whole one)
+  let dy = Math.atan2(vb.x, vb.z) - ya;
+  while (turn * dy < 0) dy += turn * 2 * Math.PI;
+  while (turn * dy > 2 * Math.PI) dy -= turn * 2 * Math.PI;
+  const pa = Math.asin(THREE.MathUtils.clamp(va.y / la, -1, 1));
+  const pb = Math.asin(THREE.MathUtils.clamp(vb.y / lb, -1, 1));
+  const yaw = ya + dy * t;
+  const pitch = pa + (pb - pa) * t;
+  const len = la + (lb - la) * t;
+  const c = Math.cos(pitch) * len;
+  out.target.set(out.pos.x + Math.sin(yaw) * c, out.pos.y + Math.sin(pitch) * len, out.pos.z + Math.cos(yaw) * c);
+  return out;
+}
+
 const PREV = makePose();
 const NEXT = makePose();
 

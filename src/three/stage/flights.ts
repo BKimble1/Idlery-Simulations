@@ -13,7 +13,7 @@
 import * as THREE from 'three';
 import type { MachineId } from '../../state/nav';
 import { waferShown } from './anchors';
-import { copyPose, deviceToWorld, fovOf, lerpPose, machinePose, makePose, resolve, worldToDevice, type CamPose, type CamSample } from './tracks';
+import { copyPose, deviceToWorld, fovOf, headingChange, lerpPose, machinePose, makePose, resolve, turnAround, turnPose, worldToDevice, type CamPose, type CamSample } from './tracks';
 
 export interface Leg {
   dur: number;
@@ -50,12 +50,17 @@ export function worldLeg(from: CamPose, target: () => CamPose): Leg {
   const overview = f.pos.y > 6 || probe.pos.y > 6;
   const viaAisle = !overview && dx > 2.5 && (dist > 6 || deep(f.pos) || deep(probe.pos));
   if (!viaAisle) {
-    const dur = overview ? clamp(1.2 + dist / 30, 1.4, 2.6) : clamp(0.6 + dist * 0.35, 0.6, 1.3);
+    // (round four) a move among the machines that turns the camera around — between machines that
+    // face each other across the aisle — pans it about the vertical, over time enough for the
+    // turn (turnPose); from and to the high overview shots the view looks down at the bay anyway
+    const turn = overview ? 0 : turnAround(f, probe);
+    const dur = Math.max(overview ? clamp(1.2 + dist / 30, 1.4, 2.6) : clamp(0.6 + dist * 0.35, 0.6, 1.3), turn ? 1 + 0.45 * headingChange(f, probe) : 0);
     return {
       dur,
       eval: (u, out) => {
         out.mix = 0;
-        lerpPose(f, target(), smooth(u), out.a);
+        if (turn) turnPose(f, target(), smooth(u), turn, out.a);
+        else lerpPose(f, target(), smooth(u), out.a);
       },
     };
   }
@@ -107,12 +112,16 @@ export function worldLeg(from: CamPose, target: () => CamPose): Leg {
  */
 export function directLeg(from: CamPose, target: () => CamPose): Leg {
   const f = copyPose(makePose(), from);
-  const dist = f.pos.distanceTo(target().pos);
+  const probe = target();
+  const dist = f.pos.distanceTo(probe.pos);
+  // (a turn-around pans about the vertical, as in worldLeg)
+  const turn = turnAround(f, probe);
   return {
-    dur: clamp(0.7 + dist * 0.22, 0.8, 1.8),
+    dur: Math.max(clamp(0.7 + dist * 0.22, 0.8, 1.8), turn ? 1 + 0.45 * headingChange(f, probe) : 0),
     eval: (u, out) => {
       out.mix = 0;
-      lerpPose(f, target(), smooth(u), out.a);
+      if (turn) turnPose(f, target(), smooth(u), turn, out.a);
+      else lerpPose(f, target(), smooth(u), out.a);
     },
   };
 }

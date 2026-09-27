@@ -187,6 +187,7 @@ async function followMove(page: Page, frames = 150) {
 for (const [label, step, p] of [
   ['out of the etch cluster from a wafer in its load lock, to the polisher (STI etch → STI fill)', 'sti-etch', 0.97],
   ['from the dicing saw to the die bonder (dice → attach)', 'dice', 0.97],
+  ['from the CD-SEM to the etch cluster, which face each other across the aisle (ADI → gate etch)', 'adi', 0.97],
 ] as const) {
   test(`the camera travels through free space and never shows a blank frame: ${label}`, async ({ page }, info) => {
     onlyDesktop(info.project.name);
