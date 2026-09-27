@@ -28,6 +28,12 @@ export interface CamPose {
   /** Vertical field of view (degrees) for framings composed for the viewport (the views of
    * the whole bay); unset for ordinary framings, which use BASE_FOV. Moves interpolate it. */
   fov?: number;
+  /**
+   * Round four: the framing looks at the sealed machine from outside (a flight's establishing
+   * beat, the explorer's view of a machine), so its housing stays closed; a move toward such a
+   * framing keeps it closed, and a move in from it opens it (Director, housingsWanted).
+   */
+  exterior?: boolean;
 }
 
 /** The field of view of ordinary framings (degrees). */
@@ -41,6 +47,7 @@ export function copyPose(dst: CamPose, src: CamPose): CamPose {
   dst.target.copy(src.target);
   dst.scale = src.scale;
   dst.fov = src.fov;
+  dst.exterior = src.exterior;
   return dst;
 }
 
@@ -75,6 +82,7 @@ function setPose(out: CamPose, space: Space, pose: Pose, m?: THREE.Matrix4): Cam
   out.space = space;
   out.scale = space === 'device' ? 'device' : 'tool';
   out.fov = undefined;
+  out.exterior = false;
   out.pos.set(pose.pos[0], pose.pos[1], pose.pos[2]);
   out.target.set(pose.target[0], pose.target[1], pose.target[2]);
   if (m) {
@@ -109,6 +117,7 @@ export function machinePose(id: MachineId, out: CamPose): CamPose {
   out.space = 'world';
   out.scale = 'tool';
   out.fov = undefined;
+  out.exterior = false;
   out.target.set(mc.x, Math.min(1.05, mc.y), mc.z);
   const ce = Math.cos(MACHINE_ELEV);
   out.pos.set(Math.sin(MACHINE_YAW) * ce, Math.sin(MACHINE_ELEV), f * Math.cos(MACHINE_YAW) * ce).multiplyScalar(dist).add(out.target);
@@ -160,6 +169,7 @@ export function resolve(ref: CamRef, ctx: ResolveCtx, out: CamPose): CamPose {
       v2.copy(v1).multiplyScalar(Math.cos(elev)).addScaledVector(wf.up, Math.sin(elev)).multiplyScalar(dist);
       out.space = 'world';
       out.scale = 'wafer';
+      out.exterior = false;
       out.target.copy(centre);
       out.pos.copy(centre).add(v2);
       return out;
@@ -232,6 +242,8 @@ export function deviceToWorld(deviceFrom: CamPose, worldTo: CamPose, t: number, 
 export function lerpPose(a: CamPose, b: CamPose, t: number, out: CamPose): CamPose {
   out.space = b.space;
   out.scale = t < 0.5 ? a.scale : b.scale;
+  // (a move toward a sealed machine keeps it sealed; a move in from one opens it at once)
+  out.exterior = !!b.exterior;
   out.fov = a.fov === undefined && b.fov === undefined ? undefined : fovOf(a) + (fovOf(b) - fovOf(a)) * t;
   out.pos.lerpVectors(a.pos, b.pos, t);
   out.target.lerpVectors(a.target, b.target, t);

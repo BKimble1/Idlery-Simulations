@@ -32,6 +32,7 @@ import { Label } from '../labels';
 import { stationBoxes, stationMatrix } from '../stage/anchors';
 import { stageTime } from '../stage/time';
 import { TOOL_POSES } from '../poses';
+import { SECTION_SRGB } from '../materials';
 
 // ───────────────────────────── materials ─────────────────────────────
 //
@@ -144,6 +145,41 @@ function bakeColors(g: THREE.BufferGeometry, b: Bake) {
 const bakedMat = new THREE.MeshBasicMaterial({ vertexColors: true });
 const railMat = nearCut(new THREE.MeshBasicMaterial({ vertexColors: true }), ...NEAR_CUT);
 
+/**
+ * Machine housings, lit (round four). The bay's structure stays baked and unlit, but a machine's
+ * enclosure is what a learner looks at from the aisle and then sees opened, so it is shaded
+ * with the machines' own physically based finishes: powder-coated panels on a restrained
+ * roughness scale, brushed and anodised metals, dark safety glass that reflects the room. The
+ * housing is one model at every distance (no level-of-detail swap to pop at): the same outline
+ * and the same shading from the bay overview to the establishing shot.
+ */
+const litStd = (p: THREE.MeshStandardMaterialParameters) => new THREE.MeshStandardMaterial(p);
+const LIT: Partial<Record<string, THREE.Material>> = {
+  white: litStd({ color: '#e2e5e8', metalness: 0, roughness: 0.56 }),
+  warm: litStd({ color: '#e5e3dd', metalness: 0, roughness: 0.58 }),
+  gray: litStd({ color: '#c3c7cc', metalness: 0.04, roughness: 0.6 }),
+  dark: litStd({ color: '#464b52', metalness: 0.12, roughness: 0.5 }),
+  black: litStd({ color: '#27292e', metalness: 0.3, roughness: 0.46 }),
+  foup: litStd({ color: '#b3bbc4', metalness: 0, roughness: 0.38 }),
+  platen: litStd({ color: '#8d9298', metalness: 0.3, roughness: 0.5 }),
+  recess: litStd({ color: '#2e3238', metalness: 0.1, roughness: 0.6 }),
+  mullion: litStd({ color: '#cfd3d8', metalness: 0.3, roughness: 0.48 }),
+  steel: litStd({ color: '#c4c9cf', metalness: 1, roughness: 0.3 }),
+  satin: litStd({ color: '#b8bdc3', metalness: 1, roughness: 0.4 }),
+  alu: litStd({ color: '#c6cad0', metalness: 0.85, roughness: 0.46 }),
+  steelDark: litStd({ color: '#71777f', metalness: 0.85, roughness: 0.42 }),
+  // the inside of a housing, seen once it is opened: a paler, flatter powder coat
+  interior: litStd({ color: '#d2d5d9', metalness: 0, roughness: 0.7 }),
+  window: litStd({ color: '#1f252b', metalness: 0.2, roughness: 0.08, envMapIntensity: 1.3 }),
+  clad: cladMat,
+  glass: smokedGlass,
+  screen: screenMat,
+  violet: violetMat,
+  // emergency-off buttons and the odd warning label: the only saturated colour on a housing
+  red: litStd({ color: '#b8322d', metalness: 0, roughness: 0.4 }),
+  amberLens: litStd({ color: '#e0a64a', metalness: 0, roughness: 0.3, emissive: '#7a4a10', emissiveIntensity: 0.4 }),
+};
+
 const MATS = {
   white: whiteMat,
   warm: warmMat,
@@ -168,10 +204,34 @@ const MATS = {
   rail: railMat,
   clad: cladMat,
   baked: bakedMat,
+  interior: whiteMat,
+  red: matte('#b8322d', 0.3),
+  amberLens: matte('#e0a64a', 0.4),
 } as const;
 type FabMat = keyof typeof MATS;
 
+/** A lit housing part's material (the baked bay's, where a machine has no finish of its own). */
+const litOf = (k: FabMat): THREE.Material => LIT[k] ?? MATS[k];
+
 // ───────────────────────────── merged-geometry builder ─────────────────────────────
+
+/** Turn a closed geometry inside out: faces and normals point inward (a cavity's walls). */
+function inward(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  const idx = g.index;
+  if (idx) {
+    const a = idx.array as Uint16Array | Uint32Array;
+    for (let i = 0; i < a.length; i += 3) {
+      const t = a[i + 1];
+      a[i + 1] = a[i + 2];
+      a[i + 2] = t;
+    }
+    idx.needsUpdate = true;
+  }
+  const n = g.attributes.normal;
+  for (let i = 0; i < n.count; i++) n.setXYZ(i, -n.getX(i), -n.getY(i), -n.getZ(i));
+  n.needsUpdate = true;
+  return g;
+}
 
 interface Tower {
   pos: THREE.Vector3;
@@ -186,16 +246,27 @@ interface Foot {
   id?: SceneId;
 }
 
-/** Collects parts per material in a station's local frame (front = +z) and merges them. */
+/**
+ * Collects parts per material in a station's local frame (front = +z) and merges them.
+ *
+ * A machine's kit (`lit`) builds its housing with the lit finishes above; the bay's own kit
+ * bakes its lighting into vertex colours. In a machine's kit, parts added inside `keep()` stay
+ * whole when the housing is opened (load ports and their pods, operator screens: a cutaway
+ * that slices a pod in half explains nothing), and `cavity()` gives a body an inside, so an
+ * opened housing shows walls with a thickness and a lit interior rather than a paper shell.
+ */
 class Kit {
   parts = new Map<FabMat, THREE.BufferGeometry[]>();
+  kept = new Map<FabMat, THREE.BufferGeometry[]>();
   towers: Tower[] = [];
   feet: Foot[] = [];
   private m = new THREE.Matrix4();
   private rot = 0;
   private ox = 0;
   private oz = 0;
+  private keeping = false;
   id?: SceneId;
+  constructor(readonly lit = false) {}
 
   /** Place the local frame at (x, z), rotated about y; front faces +z locally. */
   at(x: number, z: number, rot = 0, id?: SceneId) {
@@ -206,23 +277,49 @@ class Kit {
     this.id = id;
     return this;
   }
+  /** Parts added in `fn` stay whole when the housing is cut open. */
+  keep(fn: () => void) {
+    const was = this.keeping;
+    this.keeping = true;
+    fn();
+    this.keeping = was;
+  }
   add(k: FabMat, geo: THREE.BufferGeometry) {
     // Merged meshes carry positions and normals only (no texture maps), indexed so shared
     // vertices are shaded once: the bay is drawn by software renderers too.
     geo.deleteAttribute('uv');
     const g = geo.index ? geo : mergeVertices(geo, 1e-4);
     g.applyMatrix4(this.m);
-    let a = this.parts.get(k);
-    if (!a) this.parts.set(k, (a = []));
+    const into = this.keeping ? this.kept : this.parts;
+    let a = into.get(k);
+    if (!a) into.set(k, (a = []));
     a.push(g);
   }
   box(k: FabMat, w: number, h: number, d: number, x: number, y: number, z: number, r = 0) {
-    // soft (bevelled) edges only on large bodies, where they read at bay scale
+    // soft (bevelled) edges on large bodies, where they read at bay scale; a lit housing also
+    // gives its panels and trims a small radius, so that their edges catch the light
     const rr = Math.min(r, Math.min(w, h, d) / 2 - 1e-4);
     const big = Math.min(w, h, d) > 0.25 && Math.max(w, h, d) > 0.9;
-    const g = rr >= 0.02 && big ? new RoundedBoxGeometry(w, h, d, 1, rr) : new THREE.BoxGeometry(w, h, d);
+    const small = this.lit && Math.min(w, h, d) > 0.012 && Math.max(w, h, d) > 0.3;
+    const g =
+      rr >= 0.02 && big
+        ? new RoundedBoxGeometry(w, h, d, 1, rr)
+        : small
+          ? new RoundedBoxGeometry(w, h, d, 1, Math.min(0.006, Math.min(w, h, d) / 2 - 1e-4))
+          : new THREE.BoxGeometry(w, h, d);
     g.translate(x, y, z);
     this.add(k, g);
+  }
+  /**
+   * The inside of a hollow body: a box whose faces point inward (lit kits only; the baked bay
+   * is never opened). With the body around it, the pair is a closed shell with a wall
+   * thickness, so the cut through it shows as a section (see cutMaterial).
+   */
+  cavity(w: number, h: number, d: number, x: number, y: number, z: number) {
+    if (!this.lit) return;
+    const g = new THREE.BoxGeometry(w, h, d);
+    g.translate(x, y, z);
+    this.add('interior', inward(g));
   }
   cyl(k: FabMat, r: number, h: number, x: number, y: number, z: number, seg = 16, axis: 'x' | 'y' | 'z' = 'y', rTop?: number) {
     const g = new THREE.CylinderGeometry(rTop ?? r, r, h, Math.min(seg, r > 0.3 ? 20 : 12));
@@ -244,21 +341,35 @@ class Kit {
     const s = Math.sin(this.rot);
     this.feet.push({ x: this.ox + x * c + z * s, z: this.oz - x * s + z * c, w, d, rot: this.rot, id: this.id });
   }
-  build(): { k: FabMat; geo: THREE.BufferGeometry }[] {
-    const out: { k: FabMat; geo: THREE.BufferGeometry }[] = [];
-    const baked: THREE.BufferGeometry[] = [];
-    for (const [k, list] of this.parts) {
-      const geo = mergeGeometries(list, false);
-      list.forEach((g) => g.dispose());
-      const b = BAKE[k];
-      if (!b) {
-        out.push({ k, geo });
-        continue;
-      }
-      bakeColors(geo, b);
-      if (b.own) out.push({ k, geo });
-      else baked.push(geo);
+  build(): Built[] {
+    const out: Built[] = [];
+    if (this.lit) {
+      // one mesh per finish, the parts that open with the housing apart from those that stay
+      for (const [map, keep] of [
+        [this.parts, false],
+        [this.kept, true],
+      ] as const)
+        for (const [k, list] of map) {
+          const geo = mergeGeometries(list, false);
+          list.forEach((g) => g.dispose());
+          out.push({ k, geo, keep });
+        }
+      return out;
     }
+    const baked: THREE.BufferGeometry[] = [];
+    for (const map of [this.parts, this.kept])
+      for (const [k, list] of map) {
+        const geo = mergeGeometries(list, false);
+        list.forEach((g) => g.dispose());
+        const b = BAKE[k];
+        if (!b) {
+          out.push({ k, geo });
+          continue;
+        }
+        bakeColors(geo, b);
+        if (b.own) out.push({ k, geo });
+        else baked.push(geo);
+      }
     if (baked.length) {
       out.push({ k: 'baked', geo: mergeGeometries(baked, false) });
       baked.forEach((g) => g.dispose());
@@ -267,12 +378,26 @@ class Kit {
   }
 }
 
+/** A merged mesh of one finish; `keep`: it stays whole when the housing is opened. */
+interface Built {
+  k: FabMat;
+  geo: THREE.BufferGeometry;
+  keep?: boolean;
+}
+
 // ───────────────────────────── common tool vocabulary ─────────────────────────────
 
-/** Plinth and powder-coated body of width w, height h, depth d, centred at (x, z). */
-function body(K: Kit, w: number, h: number, d: number, x = 0, z = 0, m: FabMat = 'white') {
+/** Housing walls, where a body is hollow (metres). */
+const WALL = 0.03;
+
+/**
+ * Plinth and powder-coated body of width w, height h, depth d, centred at (x, z). A `hollow`
+ * body has walls WALL thick and a lit inside (for the housings that open: see Kit.cavity).
+ */
+function body(K: Kit, w: number, h: number, d: number, x = 0, z = 0, m: FabMat = 'white', hollow = false) {
   K.box('gray', w - 0.05, 0.1, d - 0.05, x, 0.05, z);
   K.box(m, w, h - 0.1, d, x, 0.1 + (h - 0.1) / 2, z, 0.035);
+  if (hollow) K.cavity(w - 2 * WALL, h - 0.1 - 2 * WALL, d - 2 * WALL, x, 0.1 + (h - 0.1) / 2, z);
 }
 /** A thin black reveal line across a front face at height y. */
 function reveal(K: Kit, w: number, y: number, zFront: number, x = 0) {
@@ -308,6 +433,27 @@ function screenArm(K: Kit, x: number, y: number, zFront: number) {
   K.box('steelDark', 0.04, 0.04, 0.22, x, y - 0.05, zFront + 0.11, 0.01);
   K.box('dark', 0.42, 0.28, 0.04, x, y + 0.08, zFront + 0.24, 0.012);
   K.box('screen', 0.38, 0.24, 0.01, x, y + 0.08, zFront + 0.265, 0.004);
+}
+/**
+ * A service door on a front face (round four): a panel standing proud of the body with a dark
+ * gap all round, a pull on one side and a small label plate (centre x, width w, from y0 to y1).
+ */
+function door(K: Kit, x: number, w: number, y0: number, y1: number, zFront: number, m: FabMat = 'white', pull: -1 | 1 = 1) {
+  const gap = 0.006;
+  K.box('recess', w, y1 - y0, 0.004, x, (y0 + y1) / 2, zFront + 0.002);
+  K.box(m, w - 2 * gap, y1 - y0 - 2 * gap, 0.014, x, (y0 + y1) / 2, zFront + 0.007, 0.004);
+  K.box('satin', 0.022, Math.min(0.3, (y1 - y0) * 0.28), 0.022, x + pull * (w / 2 - 0.07), y0 + (y1 - y0) * 0.52, zFront + 0.024, 0.006);
+  K.box('dark', 0.1, 0.034, 0.006, x - pull * (w / 2 - 0.1), y1 - 0.09, zFront + 0.016, 0.002);
+}
+/** A ventilation grille: slats across width w, centred at height y. */
+function grille(K: Kit, x: number, w: number, y: number, zFront: number, n = 5) {
+  K.box('recess', w, n * 0.022 + 0.01, 0.004, x, y, zFront + 0.002);
+  for (let i = 0; i < n; i++) K.box('gray', w - 0.02, 0.01, 0.012, x, y - (n - 1) * 0.011 + i * 0.022, zFront + 0.006);
+}
+/** Emergency-off button: a red mushroom on a yellow plate. */
+function emo(K: Kit, x: number, y: number, zFront: number) {
+  K.box('amberLens', 0.09, 0.09, 0.01, x, y, zFront + 0.005);
+  K.cyl('red', 0.026, 0.03, x, y, zFront + 0.024, 16, 'z');
 }
 
 // ───────────────────────────── tools (local frame, front = +z) ─────────────────────────────
@@ -537,23 +683,58 @@ function etchCluster(K: Kit) {
   K.foot(3.0, 3.8, 0, -0.1);
 }
 
+/**
+ * Coater/developer track (round four), three blocks in a row as the detailed scene lays them
+ * out (Track.tsx, mounted by poses/track.ts): the carrier block at the west end, with its load
+ * ports under a small mini-environment window and the operator's panel; the process block,
+ * tall and full of stacked modules, behind a row of service doors; the interface block at the
+ * east end, joined to the scanner by a short enclosed bridge. The body is hollow, so opened it
+ * shows its inside and its cut walls read as sections. The load ports, their pods, the panel,
+ * the emergency-off button and the bridge stay whole when the housing opens.
+ */
 function track(K: Kit) {
   const w = 6.0;
   const d = 2.2;
   const h = 2.35;
-  body(K, w, h, d);
-  for (let i = 0; i < 6; i++) K.box('window', 0.62, 0.36, 0.012, -1.55 + i * 0.84, 1.72, d / 2 + 0.004, 0.004);
-  reveal(K, w, 1.42, d / 2);
-  reveal(K, w, 2.02, d / 2);
-  for (let i = 0; i < 6; i++) K.box('warm', 0.8, 1.05, 0.012, -2.15 + i * 0.86, 0.75, d / 2 + 0.004, 0.006);
-  // load ports at the west end
-  loadPorts(K, [-2.62, -2.1], d / 2, [0, 1]);
-  K.cyl('satin', 0.14, w - 0.6, 0.1, h + 0.16, -0.55, 18, 'x');
-  K.box('gray', 1.2, 0.36, d - 0.4, 1.9, h + 0.18, 0, 0.03);
-  // chemical cabinet doors below, a service rail on top
-  for (let i = 0; i < 6; i++) K.box('satin', 0.012, 0.3, 0.02, -2.15 + i * 0.86 + 0.34, 0.75, d / 2 + 0.014);
-  K.box('satin', w - 1.8, 0.04, 0.04, -0.5, h + 0.02, d / 2 - 0.1, 0.01);
-  screenArm(K, 2.6, 1.5, d / 2);
+  const zf = d / 2;
+  const xc = -1.81; // carrier | process
+  const xi = 1.71; // process | interface
+  body(K, w, h, d, 0, 0, 'white', true);
+  // the blocks' joints: dark reveals up the front and across the roof
+  for (const x of [xc, xi]) {
+    K.box('recess', 0.018, h - 0.12, 0.006, x, 0.1 + (h - 0.1) / 2, zf + 0.002);
+    K.box('recess', 0.018, 0.006, d, x, h + 0.002, 0);
+  }
+  // carrier block
+  K.box('window', 0.92, 0.32, 0.014, -2.36, 1.74, zf + 0.004, 0.004);
+  grille(K, -2.36, 0.92, 2.14, zf, 4);
+  K.keep(() => {
+    loadPorts(K, [-2.62, -2.1], zf, [0, 1]);
+    screenArm(K, -1.5, 1.55, zf);
+  });
+  // process block: five tall service doors over a kick grille, a status line along the top
+  const n = 5;
+  const dw = (xi - xc) / n;
+  for (let i = 0; i < n; i++) door(K, xc + dw * (i + 0.5), dw - 0.014, 0.3, 2.18, zf, 'white', i % 2 ? -1 : 1);
+  grille(K, (xc + xi) / 2, xi - xc - 0.08, 0.19, zf, 3);
+  K.box('violet', xi - xc - 0.3, 0.008, 0.006, (xc + xi) / 2, 2.25, zf + 0.004);
+  // interface block: two doors and the emergency-off button
+  const iw = w / 2 - xi;
+  door(K, xi + iw * 0.27, iw * 0.5, 0.3, 2.18, zf, 'white', 1);
+  door(K, xi + iw * 0.73, iw * 0.42, 0.3, 1.5, zf, 'white', -1);
+  grille(K, xi + iw / 2, iw - 0.06, 0.19, zf, 3);
+  K.keep(() => {
+    emo(K, xi + iw * 0.73, 1.72, zf);
+    // the enclosed bridge that carries wafers to and from the scanner beside the track
+    K.box('gray', 0.34, 0.66, 0.9, w / 2 + 0.16, 0.98, 0.1, 0.02);
+    K.box('recess', 0.34, 0.02, 0.9, w / 2 + 0.16, 0.66, 0.1);
+  });
+  // roof: fan-filter units, the exhaust main and the chemical supply lines along the back
+  K.box('gray', 1.0, 0.14, d - 0.34, -2.4, h + 0.07, 0.06, 0.02);
+  for (let i = 0; i < 3; i++) K.box('gray', 1.08, 0.11, d - 0.6, xc + 0.62 + i * 1.18, h + 0.055, 0.14, 0.02);
+  K.cyl('satin', 0.14, w - 0.6, 0.1, h + 0.16, -0.78, 18, 'x');
+  for (const x of [-1.3, 0.1, 1.2]) K.cyl('satin', 0.07, 0.14, x, h + 0.07, -0.78, 12);
+  for (let i = 0; i < 3; i++) K.cyl('steel', 0.012, w - 0.9, 0.05, h + 0.03, -1.0 + i * 0.045, 8, 'x');
   K.tower(-w / 2 + 0.2, h, -d / 2 + 0.2);
   K.foot(w, d);
 }
@@ -978,6 +1159,7 @@ function buildTools(kitFor: (id?: SceneId) => Kit) {
     K.at(x, z, faceNorth ? 0 : Math.PI, id);
     fn(K);
   };
+  // (machines without a lesson of their own, placed with `undefined`, share one lit kit)
   const st = (id: SceneId) => STATIONS[id]!;
   const north = (id: SceneId, fn: (k: Kit) => void) => place(id, st(id)[0], st(id)[1], facing(id) > 0, fn);
   north('foup', sorter);
@@ -1193,6 +1375,12 @@ interface CutMats {
   byBase: Map<THREE.Material, THREE.Material>;
 }
 
+/** Colour of a cut face and of its hatching (display-referred sRGB, as the frame is drawn). */
+const SECTION_GLSL = SECTION_SRGB.map((h) => {
+  const c = new THREE.Color().setStyle(h, THREE.LinearSRGBColorSpace);
+  return `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
+}) as [string, string];
+
 /**
  * A housing's material as drawn opened: clipped, and two-sided so the inside shows through
  * the cut. Back faces are drawn a hair deeper than front faces (one pixel's depth slope, as a
@@ -1207,10 +1395,28 @@ function cutMaterial(base: THREE.Material, planes: THREE.Plane[]): THREE.Materia
   cm.clipIntersection = true;
   cm.onBeforeCompile = (sh, r) => {
     base.onBeforeCompile(sh, r);
-    sh.fragmentShader = sh.fragmentShader.replace(
-      '#include <clipping_planes_fragment>',
-      '#include <clipping_planes_fragment>\n\tgl_FragDepth = gl_FrontFacing ? gl_FragCoord.z : gl_FragCoord.z + fwidth(gl_FragCoord.z) + 2.5e-7;',
-    );
+    sh.vertexShader = 'varying vec3 vCutW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n\tvCutW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader =
+      'varying vec3 vCutW;\n' +
+      sh.fragmentShader
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n\tgl_FragDepth = gl_FrontFacing ? gl_FragCoord.z : gl_FragCoord.z + fwidth(gl_FragCoord.z) + 2.5e-7;')
+        // Round four: where the cut passes through a wall, the eye sees the wall's inside
+        // (a back face): draw it as a section, flat and finely hatched, like the cut face of
+        // a technical cutaway drawing, so an opened housing reads as an illustration's cut
+        // and not as a machine missing its panels.
+        // (the hatching is anti-aliased, and fades out where its stripes would be finer than a
+        // few pixels: a distant cut is a flat section, never a moire)
+        .replace(
+          '#include <dithering_fragment>',
+          `#include <dithering_fragment>
+	if (!gl_FrontFacing) {
+		float u = (vCutW.x + vCutW.y + vCutW.z) * 18.0;
+		float fw = max(fwidth(u), 1e-4);
+		float line = 1.0 - smoothstep(0.12 - fw, 0.12 + fw, abs(fract(u) - 0.5));
+		line *= 1.0 - smoothstep(0.2, 0.45, fw);
+		gl_FragColor = vec4(mix(${SECTION_GLSL[0]}, ${SECTION_GLSL[1]}, line), 1.0);
+	}`,
+        );
   };
   cm.customProgramCacheKey = () => base.customProgramCacheKey() + ':cut';
   return cm;
@@ -1229,19 +1435,22 @@ const warmMaterials: THREE.Material[] = [];
 export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; hero?: boolean; picking?: FabPicking }) {
   const reduced = useReducedMotion();
   const built = useMemo(() => {
+    // the bay's own structure, baked; every machine's housing lit (see LIT)
     const shared = new Kit();
+    const fillers = new Kit(true);
     const kits = new Map<SceneId, Kit>();
     const kitFor = (id?: SceneId) => {
-      if (!id) return shared;
+      if (!id) return fillers;
       let k = kits.get(id);
-      if (!k) kits.set(id, (k = new Kit()));
+      if (!k) kits.set(id, (k = new Kit(true)));
       return k;
     };
     buildTools(kitFor);
     buildBay(shared);
-    const all = [shared, ...kits.values()];
+    const all = [shared, fillers, ...kits.values()];
     return {
       meshes: shared.build(),
+      fillers: fillers.build(),
       stations: [...kits.entries()].map(([id, k]) => ({ id, meshes: k.build() })),
       towers: all.flatMap((k) => k.towers),
       feet: all.flatMap((k) => k.feet),
@@ -1250,6 +1459,7 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
   useLayoutEffect(
     () => () => {
       built.meshes.forEach((m) => m.geo.dispose());
+      built.fillers.forEach((m) => m.geo.dispose());
       built.stations.forEach((st) => st.meshes.forEach((m) => m.geo.dispose()));
     },
     [built],
@@ -1257,6 +1467,8 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
   // Level of detail: hide a station's proxy (and its lens and floor shadow) while its detailed
   // tool is shown in the same place.
   const stationGroups = useRef(new Map<SceneId, THREE.Group>());
+  /** The part of each housing that opens (the rest stays whole: see Kit.keep). */
+  const cutGroups = useRef(new Map<SceneId, THREE.Group>());
   const lodKey = useRef('');
   const hl: SceneId | undefined = hero ? undefined : highlight === 'wafer' ? 'inspect' : highlight;
 
@@ -1319,7 +1531,7 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
     const dt = cutClock.dt ?? (stageTime.virtual ? stageTime.dt : Math.min(raw, 0.1));
     const preset = cutClock.preset;
     cutClock.preset = null;
-    stationGroups.current.forEach((g, id) => {
+    stationGroups.current.forEach((_g, id) => {
       const spec = TOOL_POSES[id].cutaway;
       if (!spec) return;
       const want = cutOpen.has(id) ? 1 : 0;
@@ -1330,12 +1542,12 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
       // move the wipe plane every frame, flickering whatever lies on it)
       const t = preset?.get(id) ?? (jump ? want : stepCut(t0, want, dt));
       if (t === t0 && (t === 0 || cuts.current.has(id))) {
-        if (t === 0 && cuts.current.has(id)) restore(g, id);
+        if (t === 0 && cuts.current.has(id)) restore(id);
         return;
       }
       cutT.set(id, t);
       if (t === 0) {
-        restore(g, id);
+        restore(id);
         return;
       }
       let c = cuts.current.get(id);
@@ -1344,7 +1556,7 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
         cuts.current.set(id, c);
         const planes = c.planes;
         const byBase = c.byBase;
-        g.traverse((o) => {
+        cutGroups.current.get(id)?.traverse((o) => {
           const mesh = o as THREE.Mesh;
           if (!mesh.isMesh) return;
           const base = (mesh.userData.base as THREE.Material) ?? (mesh.material as THREE.Material);
@@ -1377,7 +1589,7 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
     const run = () => {
       if (done) return;
       const bases = new Map<THREE.Material, THREE.Mesh>();
-      stationGroups.current.forEach((g, id) => {
+      cutGroups.current.forEach((g, id) => {
         if (!TOOL_POSES[id]?.cutaway) return;
         g.traverse((o) => {
           const mesh = o as THREE.Mesh;
@@ -1407,8 +1619,8 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
     // (once: the bay's materials do not change)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const restore = (g: THREE.Group, id: SceneId) => {
-    g.traverse((o) => {
+  const restore = (id: SceneId) => {
+    cutGroups.current.get(id)?.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh && mesh.userData.base) mesh.material = mesh.userData.base as THREE.Material;
     });
@@ -1569,6 +1781,7 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
           <mesh key={k} geometry={geo} material={MATS[k]} castShadow={false} receiveShadow={false} renderOrder={k === 'amber' || k === 'clear' ? 3 : 0} />
         ),
       )}
+      {/* machine housings (lit): what opens with the housing, and what stays whole */}
       {built.stations.map((st) => (
         <group
           key={st.id}
@@ -1577,12 +1790,27 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
             else stationGroups.current.delete(st.id);
           }}
         >
-          {st.meshes.map(({ k, geo }) =>
-            k === 'hanger' && !hero ? null : (
-              <mesh key={k} geometry={geo} material={MATS[k]} castShadow={false} receiveShadow={false} renderOrder={k === 'amber' || k === 'clear' ? 3 : 0} />
-            ),
-          )}
+          <group
+            ref={(g) => {
+              if (g) cutGroups.current.set(st.id, g);
+              else cutGroups.current.delete(st.id);
+            }}
+          >
+            {st.meshes
+              .filter((m) => !m.keep)
+              .map(({ k, geo }) => (
+                <mesh key={k} geometry={geo} material={litOf(k)} castShadow={false} receiveShadow />
+              ))}
+          </group>
+          {st.meshes
+            .filter((m) => m.keep)
+            .map(({ k, geo }) => (
+              <mesh key={`keep:${k}`} geometry={geo} material={litOf(k)} castShadow={false} receiveShadow />
+            ))}
         </group>
+      ))}
+      {built.fillers.map(({ k, geo }) => (
+        <mesh key={`fill:${k}`} geometry={geo} material={litOf(k)} castShadow={false} receiveShadow />
       ))}
       {picking &&
         pickBoxes.map((b) => (

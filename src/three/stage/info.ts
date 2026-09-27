@@ -22,9 +22,11 @@ export interface StageInfo {
   failed: MachineId | null;
   /** The first picture has been drawn with its machine loaded (the page may reveal the stage). */
   shown: boolean;
+  /** Round four: the machine on screen is drawn opened, a cutaway (the scale label says so). */
+  cutaway: boolean;
 }
 
-export const useStageInfo = create<StageInfo>(() => ({ scale: 'fab', space: 'world', freeLook: false, flying: false, loading: null, failed: null, shown: false }));
+export const useStageInfo = create<StageInfo>(() => ({ scale: 'fab', space: 'world', freeLook: false, flying: false, loading: null, failed: null, shown: false, cutaway: false }));
 
 export function publish(p: StageInfo) {
   const cur = useStageInfo.getState();
@@ -35,7 +37,8 @@ export function publish(p: StageInfo) {
     cur.flying !== p.flying ||
     cur.loading !== p.loading ||
     cur.failed !== p.failed ||
-    cur.shown !== p.shown
+    cur.shown !== p.shown ||
+    cur.cutaway !== p.cutaway
   )
     useStageInfo.setState(p);
 }

@@ -31,7 +31,10 @@ export const SCALE_LABEL: Record<ScaleId, [string, string]> = {
 
 export function ScaleLabel() {
   const scale = useStageInfo((s) => s.scale);
-  const [a, b] = SCALE_LABEL[scale];
+  const cutaway = useStageInfo((s) => s.cutaway);
+  const [a, b0] = SCALE_LABEL[scale];
+  // an opened machine is an illustration's cutaway: nobody sees inside a running tool
+  const b = cutaway ? 'cutaway view · covers drawn removed' : b0;
   return (
     <div className="scale-label" data-occludes>
       <b>{a}</b>

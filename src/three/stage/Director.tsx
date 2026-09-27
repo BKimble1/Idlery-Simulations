@@ -244,6 +244,12 @@ function evalFlight(f: Flight, now: number, out: CamSample): boolean {
   return false;
 }
 
+/** Whether a camera position is within a machine's housing (or right at its skin). */
+function insideHousing(id: MachineId, p: THREE.Vector3): boolean {
+  const box = stationBoxes.get(id);
+  return !!box && p.x > box.min.x - 0.3 && p.x < box.max.x + 0.3 && p.z > box.min.z - 0.3 && p.z < box.max.z + 0.3 && p.y < box.max.y + 0.3;
+}
+
 /** The learner's wafer is shown by `owner` only (null: by any machine that holds it). */
 function applyOwner(owner: MachineId | null) {
   waferRegistry.forEach((m, id) => {
@@ -404,8 +410,11 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
           const d = useDemo.getState();
           const id = DEMO_STEP[a.machine];
           (a.reducedMotion ? evalTrackStill : evalTrack)(trackFor(id), d.progress, { station: a.machine, variant: STEPS[id].variant }, out);
-        } else if (a.machine) resolve({ kind: 'machine', station: a.machine }, { station: a.machine }, out.a);
-        else {
+        } else if (a.machine) {
+          // the explorer shows the machine sealed; its demonstration opens it
+          resolve({ kind: 'machine', station: a.machine }, { station: a.machine }, out.a);
+          out.a.exterior = true;
+        } else {
           overviewPose(aspectNow(), out.a);
           return;
         }
@@ -512,14 +521,23 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
   const caughtUp = (sample: CamSample) =>
     stageCommit.pres === filmBridge.pres && (shown(sample).space !== 'device' || !deviceShown.mounted || deviceShown.exact);
 
-  /** The housings the story wants opened for a view, at the machine `focus` (see finishFrame). */
+  /**
+   * The housings the story wants opened for a view, at the machine `focus` (see finishFrame).
+   * Round four: a machine is shown sealed while the camera looks at it from outside (a flight's
+   * establishing beat, the explorer's view of it: `exterior`), and opens as the camera moves in
+   * from there; it never closes around the camera, which may be inside it (coming out of the
+   * layers onto a die inside a machine, say). A function of the camera alone, so a seek in the
+   * film opens the housings exactly as playing does.
+   */
   const housingsWanted = (sample: CamSample, focus: MachineId | null, flight: Flight | null, out: { add(id: MachineId): unknown }) => {
     const cam = shown(sample);
     const mid = sample.mix > 0 && sample.mix < 1;
     for (const id of readyStations) {
       if (!TOOL_POSES[id].cutaway) continue;
       const inStory = id === focus || (!!flight && (id === flight.from || id === flight.to));
-      if (inStory && (cam.space === 'device' || mid || cam.pos.distanceTo(stationCentre(id, tmp.c)) < LOD_DISTANCE)) out.add(id);
+      if (!inStory) continue;
+      if (cam.space === 'device' || mid) out.add(id);
+      else if (cam.pos.distanceTo(stationCentre(id, tmp.c)) < LOD_DISTANCE && (!cam.exterior || insideHousing(id, cam.pos))) out.add(id);
     }
   };
 
@@ -884,14 +902,16 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
 
     s.lastSpace = cam.space;
     if (!flying) s.lastStation = f;
+    const scale = scaleOf(cam, a.mode);
     publish({
       space: cam.space,
       freeLook: s.freeLook && (a.mode === 'learn' || a.mode === 'explore'),
       flying,
-      scale: scaleOf(cam, a.mode),
+      scale,
       loading,
       failed,
       shown: s.shown,
+      cutaway: cam.space === 'world' && scale !== 'fab' && !!f && cutAmount(f) > 0.5,
     });
     if (s.drawn) return;
     const buf = gl.getDrawingBufferSize(copies.buf);

@@ -87,6 +87,7 @@ export function worldLeg(from: CamPose, target: () => CamPose): Leg {
       out.mix = 0;
       out.a.space = 'world';
       out.a.scale = k < 0.5 ? f.scale : probe.scale;
+      out.a.exterior = !!probe.exterior;
       path.getPoint(t, out.a.pos);
       look.getPoint(t, out.a.target);
       // follow a destination that moves while we travel (blended in towards the end)
@@ -156,7 +157,9 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
   /** World to world, via the new machine's establishing shot when changing machine. */
   const worldPath = (from: CamPose) => {
     if (o.establish && o.to) {
+      // the whole new machine, sealed: its housing opens only as the camera moves in from here
       const est = machinePose(o.to, makePose());
+      est.exterior = true;
       o.fit(est);
       const travel = worldLeg(from, () => est);
       travel.between = true;
