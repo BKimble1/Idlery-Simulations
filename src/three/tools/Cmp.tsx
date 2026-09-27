@@ -165,6 +165,38 @@ function slurryTexture() {
   return t;
 }
 
+/**
+ * The slurry banked against the carrier's retaining ring (round four): the pad carries the
+ * slurry film into the ring, which squeezes it off the pad's surface, so a thicker, brighter
+ * bead gathers along the upstream side of the ring while the head presses down. Alpha only; the
+ * bead is at +x, turned toward the incoming pad each frame.
+ */
+function bowTexture() {
+  const n = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = n;
+  const g = c.getContext('2d')!;
+  const img = g.createImageData(n, n);
+  for (let y = 0; y < n; y++)
+    for (let x = 0; x < n; x++) {
+      const u = (x + 0.5) / n - 0.5;
+      const v = (y + 0.5) / n - 0.5;
+      const r = Math.hypot(u, v) * 2; // 0 centre … 1 edge of the texture square
+      const a = Math.atan2(v, u); // 0 at +x
+      const front = Math.pow(Math.max(0, Math.cos(a)), 1.6);
+      // the bead hugs the ring (r ≈ 0.82 of the outer radius) and fades outward
+      const band = Math.exp(-Math.pow((r - 0.84) / 0.07, 2));
+      const k = Math.min(1, band * (0.18 + 0.82 * front));
+      const i = (y * n + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = Math.round(255 * k);
+    }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 // ───────────────────────────── geometry helpers ─────────────────────────────
 
 function Turned({ profile, m = 'steelSatin', seg: segs = 96, position }: { profile: V2[]; m?: MatKey | THREE.Material; seg?: number; position?: V3 }) {
@@ -434,13 +466,17 @@ function Base() {
   );
 }
 
-function PlatenAssembly({ platen, film, filmMat }: { platen: React.RefObject<THREE.Group | null>; film: React.RefObject<THREE.Mesh | null>; filmMat: THREE.MeshBasicMaterial }) {
-  const padTex = useMemo(padTexture, []);
-  const padMat = useMemo(() => new THREE.MeshPhysicalMaterial({ map: padTex, roughness: 0.62, clearcoat: 0.35, clearcoatRoughness: 0.4 }), [padTex]);
-  useEffect(() => () => {
-    padTex.dispose();
-    padMat.dispose();
-  }, [padTex, padMat]);
+function PlatenAssembly({
+  platen,
+  film,
+  filmMat,
+  padMat,
+}: {
+  platen: React.RefObject<THREE.Group | null>;
+  film: React.RefObject<THREE.Mesh | null>;
+  filmMat: THREE.MeshBasicMaterial;
+  padMat: THREE.MeshPhysicalMaterial;
+}) {
   return (
     <group>
       {/* splash basin */}
@@ -653,10 +689,20 @@ export default function Cmp({ variant }: ToolProps) {
     () => new THREE.MeshBasicMaterial({ map: slurryTex, color: '#f6f4ee', transparent: true, opacity: 0, depthWrite: false }),
     [slurryTex],
   );
+  // the pad: polyurethane that turns glossy once the slurry wets it
+  const padTex = useMemo(padTexture, []);
+  const padMat = useMemo(() => new THREE.MeshPhysicalMaterial({ map: padTex, roughness: 0.62, clearcoat: 0.35, clearcoatRoughness: 0.4 }), [padTex]);
+  const bowTex = useMemo(bowTexture, []);
+  const bowMat = useMemo(() => new THREE.MeshBasicMaterial({ map: bowTex, color: '#f4f2eb', transparent: true, opacity: 0, depthWrite: false }), [bowTex]);
   useEffect(() => () => {
     slurryTex.dispose();
     filmMat.dispose();
-  }, [slurryTex, filmMat]);
+    padTex.dispose();
+    padMat.dispose();
+    bowTex.dispose();
+    bowMat.dispose();
+  }, [slurryTex, filmMat, padTex, padMat, bowTex, bowMat]);
+  const bow = useRef<THREE.Group>(null);
 
   const f = useMemo<Frame>(
     () => ({ armTh: TH_PAD, headY: HEAD_UP, headSpin: 0, platen: 0, flip: 0, flipLift: 0, bladeExt: 0, bladeY: XFER_LO, cond: COND_PARK, condY: 0.05, condSpin: 0, slurry: 0, wet: 0, wvis: false, wx: 0, wy: 0, wz: 0, wrot: 0, wflip: 0 }),
@@ -669,6 +715,22 @@ export default function Cmp({ variant }: ToolProps) {
     if (film.current) {
       film.current.visible = f.wet > 0.01;
       filmMat.opacity = f.wet;
+    }
+    padMat.roughness = 0.62 - 0.22 * f.wet;
+    padMat.clearcoat = 0.35 + 0.5 * f.wet;
+    padMat.clearcoatRoughness = 0.4 - 0.28 * f.wet;
+    // slurry banked on the upstream side of the retaining ring while the head presses down
+    if (bow.current) {
+      const pressed = f.wvis && f.wflip === 1 && f.headY < PAD_Y + WT + 0.004 ? 1 - Math.min(1, (f.headY - PAD_Y - WT) / 0.004) : 0;
+      const k = pressed * f.wet;
+      bow.current.visible = k > 0.01;
+      bowMat.opacity = Math.min(1, 1.1 * k);
+      if (k > 0.01) {
+        // the pad turns counter-clockwise from above: at the head its surface moves along (z, −x);
+        // the bead gathers where the pad comes in
+        bow.current.position.set(f.wx, PAD_Y + 0.0018, f.wz);
+        bow.current.rotation.y = Math.atan2(-f.wx, -f.wz);
+      }
     }
     if (arm.current) arm.current.rotation.y = f.armTh;
     // the arm group sits at ARM_Y = 1.42; the head hangs below it
@@ -706,7 +768,12 @@ export default function Cmp({ variant }: ToolProps) {
     <group>
       <CleanFloor size={12} />
       <Base />
-      <PlatenAssembly platen={platen} film={film} filmMat={filmMat} />
+      <PlatenAssembly platen={platen} film={film} filmMat={filmMat} padMat={padMat} />
+      <group ref={bow} visible={false}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} material={bowMat} renderOrder={2}>
+          <circleGeometry args={[0.215, 64]} />
+        </mesh>
+      </group>
       <SwingArm arm={arm} head={head} headSpin={headSpin} spindle={spindle} />
       <Conditioner arm={condArm} disk={condDisk} lift={condLift} />
       <SlurryArm stream={stream} />

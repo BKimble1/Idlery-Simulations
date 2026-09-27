@@ -115,6 +115,18 @@ export function SectionCut({ planes, children }: { planes: THREE.Plane[]; childr
 }
 
 /**
+ * Share of a housing's opening the housing itself takes (the first 0.8 s of CUT_TIME in
+ * Fab.tsx); the parts inside it that are cut open after it (a vacuum chamber's wall, a transfer
+ * chamber's lid) open in the rest, and close first.
+ */
+export const HOUSING_SHARE = 0.62;
+
+/** How far the parts inside a housing are open (0..1) when the housing's opening is at t. */
+export function innerOpening(t: number): number {
+  return Math.max(0, Math.min(1, (t - HOUSING_SHARE) / (1 - HOUSING_SHARE)));
+}
+
+/**
  * Planes that remove a wedge of a turned part: the sector of azimuths (measured from +z toward
  * +x, in the part's own frame) [centre − width/2, centre + width/2], width under π. `open`
  * (0..1) pushes the wedge in from beyond `reach` (the part's radius: nothing is cut) to the

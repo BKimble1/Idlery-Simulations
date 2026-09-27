@@ -1,0 +1,20 @@
+{
+  "viewport": [1280, 800],
+  "dpr": 1,
+  "query": "quality=low",
+  "groups": [
+    { "name": "explore-etch", "path": "/?explore=etch" },
+    { "name": "explore-depo", "path": "/?explore=depo" },
+    { "name": "explore-cmp", "path": "/?explore=cmp" },
+    { "name": "explore-furnace", "path": "/?explore=furnace" },
+    { "name": "explore-implant", "path": "/?explore=implant" },
+    { "name": "explore-wetclean", "path": "/?explore=wetclean" },
+    { "name": "explore-inspect", "path": "/?explore=inspect" },
+    { "name": "explore-metrology", "path": "/?explore=metrology" },
+    { "name": "explore-prober", "path": "/?explore=prober" },
+    { "name": "explore-foup", "path": "/?explore=foup" },
+    { "name": "gate-etch", "path": "/?step=gate-etch", "points": [0.3, 0.55] },
+    { "name": "gatestack", "path": "/?step=gatestack", "points": [0.5] },
+    { "name": "contact-fill", "path": "/?step=contact-fill", "points": [0.6] }
+  ]
+}

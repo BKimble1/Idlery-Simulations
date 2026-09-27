@@ -15,6 +15,23 @@ const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const LENS_X = 0.3;
 export const MEAS_X = -0.4;
 
+/**
+ * The machine's heights (tool frame, m; round four): the stage base's top, the wafer on its
+ * chuck (drawn 1.6 mm thick), the immersion gap as production tools have it — the last lens
+ * element 1 mm over the wafer, the hood 0.5 mm (the magnified inset draws the same) — the
+ * 1.28 m lens, the reticle above it and the beam delivery into the illuminator, where the bay
+ * model's duct meets the detailed scene's.
+ */
+export const GRANITE_TOP = 0.66;
+export const WAFER_Y = GRANITE_TOP + 0.075;
+export const WAFER_TOP = WAFER_Y + 0.0016;
+export const LENS_Y0 = WAFER_TOP + 0.001;
+export const HOOD_Y0 = WAFER_TOP + 0.0005;
+export const LENS_H = 1.28;
+export const LENS_TOP = LENS_Y0 + LENS_H;
+export const RETICLE_Y = LENS_TOP + 0.22;
+export const BEAM_Y = RETICLE_Y + 0.82;
+
 /** Field positions (m) relative to the wafer centre, in exposure order. */
 export const FIELD_M = FIELDS.map((f) => ({ x: f.x / 1000, y: f.y / 1000, h: f.h / 1000 }));
 

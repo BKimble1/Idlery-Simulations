@@ -33,7 +33,25 @@ import { Wafer, WaferFraming } from '../wafer/Wafer';
 import type { ToolProps } from './index';
 import { useOverlay, usePresentation } from '../../state/presentation';
 import { magnifierFrame, useMagnifier } from '../../state/magnifier';
-import { APPROACH_FROM, EXPOSE_TO, exposurePose, LENS_X, makeExposurePose, markPose, MEAS_X, stageBases } from './scannerMotion';
+import {
+  APPROACH_FROM,
+  BEAM_Y,
+  EXPOSE_TO,
+  exposurePose,
+  GRANITE_TOP,
+  HOOD_Y0,
+  LENS_H,
+  LENS_TOP,
+  LENS_X,
+  LENS_Y0,
+  makeExposurePose,
+  markPose,
+  MEAS_X,
+  RETICLE_Y,
+  stageBases,
+  WAFER_TOP,
+  WAFER_Y,
+} from './scannerMotion';
 import { drawReticle, type ReticleKind } from './reticleArt';
 
 // ───────────────────────────── layout (metres) ─────────────────────────────
@@ -43,21 +61,10 @@ import { drawReticle, type ReticleKind } from './reticleArt';
 // front of the housing's centre (poses/scanner.ts), so the rear bulkhead is at the housing's cut
 // plane.
 
-const GRANITE_TOP = 0.66;
-/** Wafer underside on the chuck, and its top (the wafer is drawn 1.6 mm thick). */
-const WAFER_Y = GRANITE_TOP + 0.075;
-const WAFER_TOP = WAFER_Y + 0.0016;
-/** Underside of the last lens element: a 2 mm film of water over the wafer (the real film is
- * about 0.1–1 mm; see the magnified inset). */
-const LENS_Y0 = WAFER_TOP + 0.002;
-/** The immersion hood's underside, about a millimetre over the wafer. */
-const HOOD_Y0 = WAFER_TOP + 0.001;
-const LENS_H = 1.28;
-const LENS_TOP = LENS_Y0 + LENS_H;
-const RETICLE_Y = LENS_TOP + 0.22;
+// heights: the stage base, the wafer, the immersion gap, the lens, the reticle and the beam
+// delivery (scannerMotion.ts)
 /** Illuminator module above the reticle stage (x0..x1, y0..y1, z0..z1). */
 const ILLUM = { x0: LENS_X - 0.48, x1: LENS_X + 0.48, y0: RETICLE_Y + 0.36, y1: RETICLE_Y + 1.02, z0: -0.92, z1: 0.36 } as const;
-const BEAM_Y = RETICLE_Y + 0.82; // beam delivery into the illuminator
 const BULKHEAD_Z = -1.0; // internal rear bulkhead (the housing's cut plane)
 const LIB_X = 1.95; // reticle library
 const HANDLER_X = -1.75; // wafer handler robot

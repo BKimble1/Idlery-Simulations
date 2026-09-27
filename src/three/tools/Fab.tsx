@@ -32,7 +32,8 @@ import { Label } from '../labels';
 import { stationBoxes, stationMatrix } from '../stage/anchors';
 import { stageTime } from '../stage/time';
 import { TOOL_POSES } from '../poses';
-import { sectionMaterial as cutMaterial } from '../kit/section';
+import { HOUSING_SHARE, innerOpening, sectionMaterial as cutMaterial } from '../kit/section';
+import { BEAM_Y } from './scannerMotion';
 
 // ───────────────────────────── materials ─────────────────────────────
 //
@@ -170,7 +171,7 @@ const LIT: Partial<Record<string, THREE.Material>> = {
   steelDark: litStd({ color: '#71777f', metalness: 0.85, roughness: 0.42 }),
   // the inside of a housing, seen once it is opened: a paler, flatter powder coat
   interior: litStd({ color: '#d2d5d9', metalness: 0, roughness: 0.7 }),
-  window: litStd({ color: '#1f252b', metalness: 0.2, roughness: 0.08, envMapIntensity: 1.3 }),
+  window: litStd({ color: '#29313a', metalness: 0.25, roughness: 0.06, envMapIntensity: 1.6 }),
   clad: cladMat,
   glass: smokedGlass,
   screen: screenMat,
@@ -533,6 +534,7 @@ function sorter(K: Kit) {
   K.box('gray', 0.03, 0.5, 0.02, ox, 1.685, zf + 0.012);
   K.box('gray', w, 0.05, 0.03, xc, 1.425, zf + 0.012);
   K.box('screen', 0.12, 0.09, 0.01, x0 + 0.085, 1.22, zf + 0.006);
+  K.keep(() => emo(K, x1 - 0.085, 1.22, zf));
   // side window of the mini-environment
   K.box('window', 0.012, 0.48, d - 0.2, x1 + 0.004, 1.685, zc, 0.004);
   // load ports: lower cover, stage housing and stage (as Foup.tsx LoadPort)
@@ -574,6 +576,8 @@ function inspection(K: Kit) {
   K.box('dark', 0.52, 0.35, 0.03, 0.72, 1.55, zf + 0.17, 0.01);
   K.box('screen', 0.48, 0.3, 0.01, 0.72, 1.555, zf + 0.186, 0.004);
   K.box('window', 0.012, 0.5, 1.0, w / 2 + 0.004, 1.5, -0.5);
+  grille(K, -0.1, 1.7, 0.19, zf, 3);
+  emo(K, -0.86, 1.12, zf);
   K.cyl('satin', 0.12, 0.35, 0.5, 2.27, -0.8, 16);
   K.tower(w / 2 - 0.15, 2.1, -d / 2 + 0.2);
   K.foot(w, d);
@@ -618,6 +622,8 @@ function wetClean(K: Kit) {
     reveal(K, w / 2 - c1, y, zf, (c1 + w / 2) / 2);
   }
   for (let i = 0; i < 5; i++) K.box('warm', 0.84, 1.0, 0.012, -1.84 + i * 0.92, 0.72, zf + 0.004, 0.006);
+  grille(K, 0, w - 0.2, 0.16, zf, 2);
+  emo(K, -2.18, 1.1, zf);
   loadPorts(K, [-1.9, -1.35], zf, [0]);
   K.cyl('satin', 0.16, w - 0.4, 0, h + 0.2, -0.6, 20, 'x');
   K.box('satin', 0.3, 0.2, 0.3, 1.6, h + 0.1, -0.6, 0.02);
@@ -641,6 +647,7 @@ function furnace(K: Kit, withFoup = true) {
   K.box('white', uw, 3.95, 1.5, 0, 0.1 + 3.95 / 2, -0.75, 0.035);
   K.box('satin', uw - 0.3, 0.3, 1.0, 0, 4.2, -0.75, 0.03);
   K.box('window', 0.14, 2.3, 0.012, -uw / 2 + 0.2, 2.35, 0.004, 0.003);
+  door(K, 0.12, uw - 0.5, 3.36, 3.98, 0, 'white', -1);
   reveal(K, uw, 3.3, 0);
   // stocker 1 cm clear of the tower; its lid at the cut height closes it when the tower opens
   body(K, uw, 2.25, 1.49, 0, 0.755, 'white');
@@ -649,6 +656,8 @@ function furnace(K: Kit, withFoup = true) {
   K.box('window', 0.7, 0.3, 0.012, -0.15, 1.75, 1.504, 0.004);
   reveal(K, uw, 1.45, 1.5);
   loadPorts(K, [0.28], 1.5, withFoup ? [0] : []);
+  grille(K, 0, uw - 0.1, 0.16, 1.5, 2);
+  emo(K, -0.4, 1.2, 1.5);
   K.tower(uw / 2 - 0.16, 4.05, -1.3);
   K.foot(uw, 3.0);
 }
@@ -665,13 +674,18 @@ function etchCluster(K: Kit) {
   const zf = 1.8;
   const hz = -0.16; // transfer-chamber hub
   const R = 0.912; // hub → chamber axis
-  // EFEM across the front, fan-filter unit on top
+  // EFEM across the front, fan-filter unit on top: service panels over the load ports (a small
+  // window onto the robot in the middle one), the operator's panel and emergency-off button
   body(K, 3.0, 2.15, 0.9, 0, zf - 0.45);
   K.box('gray', 2.9, 0.1, 0.8, 0, 2.2, zf - 0.45, 0.02);
-  K.box('window', 1.8, 0.5, 0.012, 0, 1.72, zf + 0.004, 0.004);
+  grille(K, 0, 2.7, 2.2, zf - 0.05, 3);
   reveal(K, 3.0, 1.38, zf);
+  [-0.9, 0, 0.9].forEach((x, i) => door(K, x, 0.96, 1.42, 2.08, zf, 'white', i === 2 ? -1 : 1));
+  K.box('window', 0.4, 0.2, 0.01, 0, 1.78, zf + 0.018, 0.004);
   loadPorts(K, [-0.9, 0, 0.9], zf, [0, 2]);
   seams(K, -1.5, 1.5, 0.12, 1.3, zf, 0.75);
+  screenArm(K, 1.3, 1.52, zf);
+  emo(K, -1.38, 1.25, zf);
   // mainframe plinth, transfer chamber with its lid, load lock
   K.box('gray', 1.16, 0.08, 1.6, 0, 0.04, hz + 0.23);
   K.box('gray', 1.18, 0.85, 1.64, 0, 0.465, hz + 0.23, 0.02);
@@ -713,8 +727,10 @@ function etchCluster(K: Kit) {
       box('white', 0.23, 0.15, 0.19, 0.02, 1.32, -0.3, 0.012);
     }
   }
-  // gas and RF cabinet at the back
+  // gas and RF cabinet at the back, its doors toward the chambers
   body(K, 2.6, 2.3, 0.55, 0, -1.725, 'warm');
+  for (let i = 0; i < 3; i++) door(K, -0.86 + i * 0.86, 0.84, 0.3, 2.14, -1.45, 'warm', i === 2 ? -1 : 1);
+  grille(K, 0, 2.5, 0.19, -1.45, 3);
   roof(K, 2.6, 2.3, 0.55, 0, -1.725);
   K.tower(1.1, 2.3, -1.9);
   K.foot(3.0, 3.8, 0, -0.1);
@@ -859,8 +875,8 @@ function scanner(K: Kit) {
   for (let i = 0; i < 3; i++) door(K, -0.9 + 0.5 + i * 1.0, 0.96, 0.3, 1.78, lz + 0.55, 'warm', i === 2 ? -1 : 1);
   grille(K, 0.6, 2.9, 0.19, lz + 0.55, 3);
   K.box('screen', 0.3, 0.12, 0.008, 1.6, 1.62, lz + 0.575, 0.003);
-  K.box('satin', 0.32, 1.28, 0.32, 0.3, 2.54, -zf - 0.95, 0.04);
-  K.box('satin', 0.32, 0.32, 1.3, 0.3, 3.06, -zf - 0.47, 0.04);
+  K.box('satin', 0.32, BEAM_Y + 0.16 - 1.9, 0.32, 0.3, (1.9 + BEAM_Y + 0.16) / 2, -zf - 0.95, 0.04);
+  K.box('satin', 0.32, 0.32, 1.3, 0.3, BEAM_Y, -zf - 0.47, 0.04);
   K.foot(w, d);
   K.foot(3.0, 1.1, 0.6, lz);
 }
@@ -900,6 +916,9 @@ function cmp(K: Kit) {
   for (let i = 1; i < 4; i++) K.box('white', 0.03, y1 - y0, 0.012, c0 + 0.03 + ((cw - 0.06) * i) / 4, (y0 + y1) / 2, zf + 0.034);
   reveal(K, w, 1.02, zf);
   seams(K, -w / 2, w / 2, 0.12, 0.98, zf, 0.85);
+  grille(K, 0, w - 0.1, 0.16, zf, 2);
+  door(K, -1.18, 0.62, 1.98, 2.3, zf, 'white', 1);
+  emo(K, -0.78, 1.12, zf);
   screenArm(K, 1.3, 0.92, zf);
   K.box('warm', 1.2, 1.9, 0.6, -0.9, 1.05, -d / 2 - 0.35, 0.03);
   roof(K, w, h, d - 0.7, 0, -0.35);
@@ -943,6 +962,8 @@ function implanter(K: Kit) {
   K.box('window', 1.0, 0.34, 0.012, (0.58 + x1) / 2, 1.72, zf + 0.004, 0.004);
   reveal(K, x1 - 0.58, 1.42, zf, (0.58 + x1) / 2);
   loadPorts(K, [0.9, 1.5], zf, [1]);
+  grille(K, (x0 + 0.57) / 2, 2.2, 0.16, zf, 2);
+  emo(K, 0.45, 1.12, zf);
   K.tower(1.65, 2.0, -1.9);
   // footprint: the halo takes the first (the beamline block and the front row)
   K.foot(x1 - x0, 3.29, (x0 + x1) / 2, -0.445);
@@ -959,10 +980,17 @@ function implanter(K: Kit) {
  */
 function depoCluster(K: Kit) {
   const zf = 1.8;
+  // front end: fan-filter unit on top, service panels over the two load ports (one with a
+  // small window onto the robot), the operator's panel and emergency-off button
   body(K, 2.4, 2.15, 0.8, 0, zf - 0.4);
-  K.box('window', 1.8, 0.5, 0.012, 0, 1.72, zf + 0.004, 0.004);
+  K.box('gray', 2.3, 0.1, 0.7, 0, 2.2, zf - 0.4, 0.02);
+  grille(K, 0, 2.1, 2.2, zf - 0.05, 3);
   reveal(K, 2.4, 1.38, zf);
+  [-0.55, 0.55].forEach((x, i) => door(K, x, 1.06, 1.42, 2.08, zf, 'white', i ? -1 : 1));
+  K.box('window', 0.36, 0.2, 0.01, -0.55, 1.78, zf + 0.018, 0.004);
   loadPorts(K, [-0.55, 0.55], zf, [1]);
+  screenArm(K, 1.02, 1.52, zf);
+  emo(K, -1.08, 1.25, zf);
   // load locks (60° and 120° from +x), on stands slim enough to hide inside the detailed ones
   for (const deg of [60, 120]) {
     const a = (deg * Math.PI) / 180;
@@ -983,8 +1011,10 @@ function depoCluster(K: Kit) {
     K.cyl('alu', 0.3, 0.045, x, 1.1825, z, 20);
     K.box('white', 0.2, 0.09, 0.11, x * 0.82, 1.25, z * 0.82, 0.01);
   }
-  // gas and RF cabinet at the back
+  // gas and RF cabinet at the back, its doors toward the chambers
   body(K, 2.4, 2.3, 0.55, 0, -1.575, 'warm');
+  for (let i = 0; i < 3; i++) door(K, -0.8 + i * 0.8, 0.78, 0.3, 2.14, -1.3, 'warm', i === 2 ? -1 : 1);
+  grille(K, 0, 2.3, 0.19, -1.3, 3);
   roof(K, 2.4, 2.3, 0.55, 0, -1.575);
   K.tower(1.0, 2.3, -1.6);
   K.foot(2.9, 3.65, 0, -0.025);
@@ -1012,6 +1042,8 @@ function metrology(K: Kit) {
   K.box('window', 0.9, 0.3, 0.012, 0.25, 1.58, zf + 0.004, 0.004);
   reveal(K, w, 1.32, zf);
   loadPorts(K, [-0.95, -0.35], zf, [0]);
+  grille(K, 0.6, 1.4, 0.16, zf, 2);
+  emo(K, 0.12, 1.1, zf);
   // operator's monitor on its arm (the live SEM image when the cabinet is opened)
   K.box('steelDark', 0.04, 0.04, 0.23, 1.0, 1.43, zf + 0.115, 0.01);
   K.box('dark', 0.62, 0.4, 0.04, 1.0, 1.53, zf + 0.25, 0.012);
@@ -1079,6 +1111,8 @@ function genericTool(K: Kit, w = 2.2, h = 2.0, d = 2.2, ports = 2) {
   seams(K, -w / 2, w / 2, 0.12, 1.3, d / 2, 1.0);
   const xs = Array.from({ length: ports }, (_, i) => -w / 2 + 0.45 + i * 0.6);
   loadPorts(K, xs, d / 2, [0]);
+  grille(K, w / 2 - 0.45, 0.7, 0.16, d / 2, 2);
+  emo(K, w / 2 - 0.2, 1.1, d / 2);
   roof(K, w, h, d);
   K.tower(w / 2 - 0.15, h, -d / 2 + 0.2);
   K.foot(w, d);
@@ -1442,10 +1476,8 @@ export const fabLod = { apply: () => {} };
  * (round four: a vacuum chamber's wall, cut once the housing around it is open; see innerCut).
  */
 export const CUT_TIME = 1.3;
-/** Share of an opening the housing itself takes (0.8 s); the parts inside open in the rest. */
-export const HOUSING_SHARE = 0.62;
 /** How far the parts inside a housing that open after it are open (0 closed … 1 open). */
-export const innerCut = (id: SceneId) => Math.max(0, Math.min(1, (cutAmount(id) - HOUSING_SHARE) / (1 - HOUSING_SHARE)));
+export const innerCut = (id: SceneId) => innerOpening(cutAmount(id));
 
 /** A housing's opening after `dt` seconds more of wanting it open (1) or closed (0). */
 export function stepCut(t0: number, want: 0 | 1, dt: number): number {
