@@ -1263,6 +1263,47 @@ a {
   margin-bottom: 4px;
 }
 
+/* The magnified inset (round four): what is too small to see at machine scale, titled as such. */
+.mag {
+  position: absolute;
+  left: 12px;
+  top: 66px;
+  z-index: 3;
+  width: 272px;
+  margin: 0;
+  padding: 8px 10px 6px;
+  background: rgba(252, 252, 251, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  box-shadow: var(--shadow-1);
+  pointer-events: none;
+}
+.mag__head {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+.mag__head b {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.mag__head span {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.mag svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.mag text {
+  font-family: inherit;
+}
+
 /* The stage's own status: a veil until the first picture is ready, then quiet notes. */
 .vp-veil {
   position: absolute;
@@ -2483,6 +2524,16 @@ a {
     font-size: 12.5px;
   }
   .inset {
+    display: none;
+  }
+  .mag {
+    top: 50px;
+    left: 8px;
+    width: 172px;
+    padding: 6px 8px 4px;
+  }
+  .mag__head span,
+  .mag .mag__minor {
     display: none;
   }
   .caption--overlay {

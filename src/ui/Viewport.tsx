@@ -17,6 +17,7 @@ import { Caption } from './Caption';
 import { PauseIcon, PlayIcon } from './Chrome';
 import { CrossSection } from './CrossSection';
 import { ErrorBoundary, HAS_WEBGL } from './ErrorBoundary';
+import { Magnifier } from './Magnifier';
 import { matColor } from './palette';
 
 const Stage = lazy(() => import('../three/Stage').then((m) => ({ default: m.Stage })));
@@ -292,6 +293,7 @@ export function StageHost({ fallback }: { fallback: React.ReactNode }) {
       <Suspense fallback={<div className="vp-veil"><span>Loading the fab…</span></div>}>
         <Stage />
         <StageStatus />
+        <Magnifier />
       </Suspense>
     </ErrorBoundary>
   );
