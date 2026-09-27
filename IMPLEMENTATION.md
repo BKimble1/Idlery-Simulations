@@ -236,12 +236,12 @@ Fifteen lazily loaded scenes, one module each, plus the fab bay:
 | `Inspect` | scan (`scan`), inspect (`review`) | granite base, XY stage and spinning chuck under an optical head; a spiral laser scan reveals the simulated particles on a live defect map; in review an SEM column visits each defect |
 | `WetClean` | clean | edge-pin spin chuck in a splash cup; a chemical arm with spray and megasonic head sweeps, a DI-rinse arm rinses, then spin-dry; particles disappear when the model applies the clean; if the learner skips it, the arms stay parked and the particles stay |
 | `Furnace` | padox (`oxidize`), anneal | vertical furnace with a cut-away heater jacket; a quartz boat of 50 wafers (yours on top) rises into the tube; heater glow follows the temperature; gas-line indicator for O₂, nitride precursors or N₂ |
-| `Etch` | sti-etch, gate-etch, contact-etch (`etch`), strip (`ash`) | cluster (EFEM, load lock, transfer robot) and a cutaway chamber: electrostatic chuck, slit valve, endpoint viewport, turbo pump; inductive coil, showerhead or dome source depending on the step; soft plasma glow during the etch |
-| `Cmp` | sti-fill, contact-fill, metal1, metal2 | rotating grooved pad, carrier head pressing the wafer face-down, slurry arm, diamond conditioner, load cup that flips the wafer, clean/dry module |
+| `Etch` | sti-etch, gate-etch, contact-etch (`etch`), strip (`ash`) | cluster (EFEM, load lock, transfer robot) and the chamber in use: electrostatic chuck, slit valve, endpoint viewport, turbo pump; inductive coil, showerhead or dome source depending on the step; soft plasma glow during the etch, after the slit valve has sealed the chamber; *round four:* the chamber is whole until the housing has opened, then cut open (hatched sections) with the transfer chamber's lid |
+| `Cmp` | sti-fill, contact-fill, metal1, metal2 | rotating grooved pad, carrier head pressing the wafer face-down, slurry arm, diamond conditioner, load cup that flips the wafer, clean/dry module; *round four:* the pad turns glossy as the slurry wets it, and slurry banks against the retaining ring while the head presses down |
 | `Implant` | wells, sd | high-voltage terminal and source, 90° analyser magnet, resolving slit, acceleration column, scanner and corrector magnet, end station with load lock; the wafer is loaded, tilted 7° to face the beam and scanned, once per mask; ion beam only with the beam-path toggle |
-| `Depo` | gatestack (`poly`), pmd (`oxide`), passivate (`pass`) | cluster with a frog-leg robot; the cutaway chamber's heater lifts the wafer under a showerhead; the wafer shows the thin-film colour of the growing film |
-| `Track` | prime, coat, softbake, peb, develop | coater/developer track: a carrier block, prime chamber, spin coat and develop cups, hot plates and the scanner interface in a row; *round three:* one robot on a rail carries the one wafer between modules (lift pins on the plates, spin chucks that rise above their cups for the hand-off; `trackMotion.ts`), the resist puddle, spread and thinning drawn continuously |
-| `Scanner` | reticle, align, expose, contact steps | 193 nm DUV scanner: illuminator, reticle stage, projection lens, dual wafer stages; toggled light path; *round three:* the two chucks swap at the start of the exposure, the stage runs one continuous step-and-scan meander with the reticle scanning opposite, and each field lights up as the slit sweeps it (`scannerMotion.ts`) |
+| `Depo` | gatestack (`poly`), pmd (`oxide`), passivate (`pass`) | cluster with a frog-leg robot; the chamber's heater lifts the wafer under a showerhead; the wafer shows the thin-film colour of the growing film; *round four:* the chamber is whole until the housing has opened, then cut open with the transfer chamber's lid |
+| `Track` | prime, coat, softbake, peb, develop | coater/developer track: a carrier block, prime chamber, spin coat and develop cups, hot plates and the scanner interface in a row; *round three:* one robot on a rail carries the one wafer between modules (lift pins on the plates, spin chucks that rise above their cups for the hand-off; `trackMotion.ts`), the resist puddle, spread and thinning drawn continuously; *round four:* in the bay's order (carrier west, interface east against the scanner), a four-nozzle resist arm from its solvent bath, edge-bead removal, a slit-nozzle developer bar and rinse arm, plates with lids and proximity pins |
+| `Scanner` | reticle, align, expose, contact steps | 193 nm DUV scanner: illuminator, reticle stage, projection lens, dual wafer stages; toggled light path; *round three:* the two chucks swap at the start of the exposure, the stage runs one continuous step-and-scan meander with the reticle scanning opposite, and each field lights up as the slit sweeps it (`scannerMotion.ts`); *round four:* a 1.28 m lens in a metrology frame, the hood 0.5 mm and the lens 1 mm over the wafer (the water shown in a magnified inset), alignment and level sensors, a planar-motor stage base, a patterned reticle, a panelled enclosure |
 | `Metrology` | adi | CD-SEM: vacuum chamber, XY stage visiting five sites, electron column; the monitor's image and CD readout come from the simulated developed resist |
 | `Prober` | probe | test head docked through a pogo tower to a probe card (drawn in half section so the needles show); the stage indexes and touches down die by die while the wafer map fills in; loader with a FOUP and tester cabinet |
 | `Dicing` | dice | taped wafer in a ring frame on a porous chuck; spindle and blade with coolant cut each street in both directions, then the table turns 90° |
@@ -324,7 +324,9 @@ so going back is instant.
 `cutaway: { z, y }` (station-local: toward the aisle and above the given height), the housing
 stays on show when the story is at that machine and the camera is near, and its upper front
 is clipped away (material clipping planes, animated from the roof down over 0.8 s; inner
-faces drawn double-sided) to reveal the detailed interior. *Round three:* back faces of an
+faces drawn double-sided) to reveal the detailed interior (*round four:* see
+[Equipment and the lithography loop](#equipment-and-the-lithography-loop-round-four) for the
+reveal rule, sections and the chambers opened after their housing). *Round three:* back faces of an
 opened housing are drawn one pixel's depth slope deeper than front faces (`cutMaterial`), so
 the underside of a part resting on another (a housing on its plinth, a roof unit on the
 housing top) never z-fights with the surface below it. A machine that loads while the
@@ -428,6 +430,122 @@ The director owns the camera and the render loop in every mode:
   and the fog is pushed back with the camera distance so a distant overview stays readable.
 * A quiet **scale label** says what the picture shows (Fab bay, Equipment view, Wafer
   surface, Magnified cross-section · schematic); it comes from the framing, not a control.
+
+## Equipment and the lithography loop *(round four)*
+
+Round four is about what the machines look like and what they visibly do. The reference matrix
+behind it (layout, load port, chamber, moving parts, wafer position, what is visible and what
+is an overlay, per machine, with sources) is in [`docs/ROUND4.md`](docs/ROUND4.md).
+
+**Housings as equipment** (`tools/Fab.tsx`). A machine's bay model is drawn with physically
+based finishes (`LIT`: powder-coated panels on a restrained roughness scale, brushed and
+anodised metals, smoked window glass) under a cleanroom reflection environment of ceiling
+light strips (`Stage.tsx`, `WorldEnvironment`); the bay's own structure stays baked. The same
+model is shown at every distance (no level-of-detail swap). Housings that open are hollow
+(`Kit.cavity`, and `prism` for a body whose elevation is not a rectangle: an extruded outline
+with its matching inside), so a cut shows walls with a thickness; parts added in `Kit.keep`
+(load ports and pods, operator panels, emergency-off buttons, the track's bridge to the
+scanner) stay whole when the housing opens. A shared vocabulary gives fronts their detail:
+`door` (a panel proud of the body with a gap, pull and label), `grille`, `emo`, `screenArm`,
+`loadPorts`.
+
+**The reveal.** A camera pose carries `exterior` (`stage/tracks.ts`): a flight's travel leg
+and the establishing hold at a new machine, and the explorer's view of a machine, are
+exterior, so the machine is seen closed. The housing opens as the camera moves in from there
+(the move-in is a direct leg, `flights.ts` `directLeg`), never closes around the camera
+(`insideHousing`), and the scale label says *cutaway view · covers drawn removed* while it is
+open (`StageInfo.cutaway`). **Sections** (`kit/section.ts`): an opened solid is drawn as a
+flat, finely hatched section where the cut passes through it (back faces of the clipped,
+two-sided material), anti-aliased and faded out with distance so it never shimmers.
+`SectionCut` applies the same drawing inside a machine: the etch and deposition chambers in
+use are whole vessels until their housing is open; then a wedge toward the aisle is pushed in
+(`wedgePlanes`) and the transfer chamber's lid wiped off (`slicePlane`). The opening takes
+`CUT_TIME` = 1.3 s: the housing the first 0.8 s (`HOUSING_SHARE`), the parts inside the rest
+(`innerCut`), closing in reverse; one value, so Watch's replay after a seek covers both.
+
+**The track** (`tools/Track.tsx`, `trackMotion.ts`). Blocks in the bay's order: the carrier
+block at the west end (against the bay's load ports), the process block, the interface block
+at the east end against the scanner; the working line prime → coat → soft bake → develop →
+post-exposure bake runs west to east, every carry at most 0.7 m. The coat cup has a four-nozzle
+resist arm that swings from its solvent bath, an edge-bead-removal arm whose solvent jet clears
+the rim progressively (`LiveCoat.ebr`, in the wafer's shader), and the liquid reads as a
+meniscus puddle; develop has a slit-nozzle bar that lays the puddle across the wafer (a
+curtain, then a clipped puddle) and a rinse arm; the plates have lids on columns and proximity
+pins; prime is a sealed hot-plate chamber.
+
+**The scanner** (`tools/Scanner.tsx`, `scannerMotion.ts`, `reticleArt.ts`). Heights are shared
+constants (`scannerMotion.ts`): the last lens element 1 mm over the wafer, the immersion hood
+0.5 mm, a 1.28 m lens in a metrology frame, the reticle above it, the beam delivery where the
+bay model's duct meets it. The stages run on a planar motor's tiled base, with encoder heads
+and fiducials; alignment and level sensors sit over the measuring side; the reticle carries a
+procedural 4× pattern (clear-field for the gate layer, dark-field for contacts) drawn from the
+die's floor plan. The slit, the light path and the alignment spot are drawn only with the
+light-path overlay, and then over the machine's parts (`LIGHT`: no depth test, drawn after the
+machine), from the reticle through the lens to the wafer, only by the scanner the story is at;
+while it is shown the scanner publishes a note (`useOverlayNote`) and the scale label names it
+as an overlay of invisible light.
+**The magnified inset** (`state/magnifier.ts`, `ui/Magnifier.tsx`): the water film is too thin
+to see at machine scale, so the page shows it in a titled schematic inset (heights to one
+scale, the gap marked); the scene publishes the stage position and whether a field is being
+exposed and redraws the inset with the frame it renders (`magnifierFrame.draw`), so seeking,
+replay and virtual time show the same inset. It is shown only while the scanner exposes, in
+the world, opened.
+
+**The dies** (`wafer/dieArt.ts`, `Wafer.tsx`). One floor plan (seal ring, pad ring, array,
+logic and analog blocks, wiring channels) is drawn on the reticle at 4× and, as a brightness
+modulation, into every die of the wafer by its shader (`DIE_GLSL`, before any film on top, so
+a resist coat still tints it; sampled with the derivatives of the unwrapped die coordinate so
+die boundaries do not break its filtering). It appears once the die is patterned, gains
+contrast with each layer, shows pads with the metal and opened pads after passivation; its
+average is grey, so from a distance the wafer looks as its painted surface does. The wafer's
+rim is rounded (0.4 mm).
+
+**The camera through free space** (`stage/flights.ts`). Leaving a close view of the wafer for
+another machine, the camera first backs out along its own line of sight to 2.4 m
+(`backOutPose`); the move in from an establishing shot is direct; *Inspect layers* at a machine
+whose wafer is not in view reveals the layers from where the camera is, and *Back to
+equipment* fades straight into the machine's framing (no flight out to its establishing shot
+and back). **The room** (`stage/tracks.ts` `ROOM`, `roomAlong`, `fitInRoom`): a camera among
+the machines stays over the central aisle (|z| ≤ 1.4 m, clear of the overhead rail above the
+load ports), under the ceiling (y ≤ 4.05 m) and inside the walls. A machine's establishing
+shot stands at most at the far side of the aisle, and a large machine is framed from there
+with a wider lens (`lensFor`: the same picture at the machine as from the distance its size
+asks for) instead of from over the other row, at the ceiling; the aspect fit of a narrow
+screen (`Director.tsx` `fitPose`) pulls a framing back only as far as the room allows and
+widens the lens for the rest (it used to take the camera out through the ceiling). The
+learner's free look keeps the lens it took over with.
+
+**Loading order** (`ui/Viewport.tsx`). The 3D stage's modules are fetched once the page's web
+fonts have loaded and it has painted once (bounded at 1.5 s). Fetched during the first layout,
+while the fonts were still loading, they could leave headless Chromium's renderer waiting
+forever on a fallback-font lookup (a fresh load of the last lesson froze about half the time;
+`docs/ROUND4.md`, *Continuity*); the fonts are small and come first.
+
+**Shadow programs** (`stage/shadowPrewarm.ts`). Preparing a model compiles its colour programs;
+the programs its shadows are drawn with (three.js gives every shadow-casting mesh a depth
+material of the mesh material's sidedness, map and alpha test) compiled only when the key light
+first turned to it — for a machine opened on the way in, in the middle of the move. Each prepared
+model, and the housings' opened materials, are therefore drawn once into a 16 × 16 shadow map of
+a light of their own from the world scene's `onAfterRender` (the frame's render state, with its
+lights, is still current; the materials' clipping planes are set aside, as the renderer's own
+shadow pass does without `clipShadows`), so three.js builds exactly the programs its shadow pass
+will ask for, while the camera is still.
+
+**Watch: the sound waits for the picture** (`watch/player.ts` `hold`, `Director.tsx`). While
+the stage holds its picture for a machine that is still loading, the film's clock stands
+still and the narration pauses where it is; the page says what it is waiting for, and the film
+carries on from the same moment once the machine is in. (The picture's own hold after a seek,
+a frame or two, does not pause the sound.) Releasing the hold leaves the clock's reference
+alone: the frame loop keeps it at the last frame while the film is held, so the first frame
+after the hold counts its own time (the stage's wait reaches the player a frame later, and a
+hold set while the film was paused is released on the first frame after *Play*: resetting the
+reference there left the film a frame behind the time a seek had shown). *Play* and seeks
+during a hold leave the narration paused until the hold ends (`syncAudio` starts an element
+only when the film is not held). In a background tab the player's timer ends the hold: with no
+picture on screen the narration plays on, as before round four, and the stage holds it again on
+return if the machine it needs is still loading. The stage's verdict reaches the player a frame
+or two after a seek, so a seek into a machine that is still loading plays that long before the
+hold begins.
 
 ## Experiments and failure modes
 

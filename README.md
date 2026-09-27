@@ -35,7 +35,11 @@ for comparison; what changed is in [`docs/ROUND2.md`](docs/ROUND2.md). Round thr
 playback, continuous transitions, believable machinery) is in
 [`docs/ROUND3.md`](docs/ROUND3.md): what was reproduced and fixed, before-and-after
 measurements, recordings in [`docs/recordings/round3/`](docs/recordings/round3/), and how to
-measure it on your own hardware.
+measure it on your own hardware. Round four (believable equipment, a lithography loop you can
+follow) is in [`docs/ROUND4.md`](docs/ROUND4.md): the reference matrix the machines were
+checked against, what changed machine by machine, before-and-after stills and clips in
+[`docs/recordings/round4/`](docs/recordings/round4/), measurements, and what is still
+schematic.
 
 ## Run it locally
 
@@ -71,7 +75,8 @@ npm run preview        # http://127.0.0.1:4173
 | `node scripts/perf.mjs <baseUrl> <out.json> [--scenarios a,b] [--video dir] [--query quality=high] [--gpu] [--headed]` | real-time measurements on a production build: frame intervals (median, p95, p99, long frames; the longest while the camera moves and while it is still), long tasks, draw calls and triangles over all passes, resource counts, per scenario; `--video` also records them in real time; `--gpu` measures on the machine's graphics hardware instead of SwiftShader |
 | `node scripts/programs.mjs [baseUrl] [--step arrive] [--next 2] [--gpu]` | which shader programs are compiled around lesson changes, in real time, and what waited for them (each program link, each call that blocked the page, long tasks, when each machine was ready and the camera moving or waiting) |
 | `node scripts/probe.mjs <baseUrl> <out.json> [--cases a,b]` | frame-by-frame checks of transitions on any build (jumps, the learner's wafer, interrupted fades, loading, film moves, shadow redraws, texture uploads, the camera around moving wafers, every lesson-to-lesson move of the course) — the round-three findings, measured the same way before and after |
-| `node scripts/frames.mjs <baseUrl> "/?step=coat&virt=1" <dir> p=0 p=0.1 …` | save canvas frames at chosen lesson points |
+| `node scripts/frames.mjs <baseUrl> "/?step=coat&virt=1" <dir> p=0 p=0.1 …` | save canvas frames at chosen lesson points (also `next`, `prev`, `adv=N`, `grab=name`, `ov=device`) |
+| `node scripts/stills.mjs <baseUrl> <spec.json> <dir> [--only a,b]` | matched stills for before/after comparisons: the same lessons at the same progress, viewport, pixel ratio and quality tier on any build (`scripts/round4/*.json`; `"page": true` also saves the page with its interface) |
 | `scripts/recordings/r3-sheets.sh` | round three's reviewed frame sequences: stills from this build and the one before the fixes, tiled into contact sheets (`docs/recordings/round3/sheet-*.jpg`; needs Python's Pillow) |
 | `node scripts/recordings/watch-sheets.mjs <baseUrl> <dir>` | Watch after a seek, frame by frame: a chapter jump into the layers (the frame before and the eleven after) and a paused seek next to the played frame at the same film time, as PNGs to tile with `scripts/recordings/sheet.py` |
 
@@ -173,9 +178,11 @@ respected: the camera never travels (it holds still compositions and cross-fades
 them), while lessons and the film keep their timing, captions and narration.
 
 Frame rates were **not** measured on real graphics hardware: the build machine renders with
-SwiftShader (software WebGL on four CPU cores), where every scene runs at about 1 frame per
-second. [`docs/ROUND3.md`](docs/ROUND3.md#measure-it-on-your-hardware) has a short benchmark
-to run on a laptop or phone (`?diag=1` shows the numbers live).
+SwiftShader (software WebGL on four CPU cores), where scenes run at about 0.5–3 frames per
+second (round four's lit, reflective equipment roughly halved round three's rate on that
+renderer; [`docs/ROUND4.md`](docs/ROUND4.md#real-time-playback-software-rendering) has the
+numbers and the cause). [`docs/ROUND3.md`](docs/ROUND3.md#measure-it-on-your-hardware) has a
+short benchmark to run on a laptop or phone (`?diag=1` shows the numbers live).
 
 ## Recordings
 
@@ -187,7 +194,10 @@ files the app plays, placed on the same timeline. The specs are in `scripts/reco
 Frame-stepped recordings are evidence of continuity, not of frame rate. Round three's
 recordings (`docs/recordings/round3/`) add real-time clips captured on the software renderer
 before and after the changes, which show the stalls as they happened; see
-[`docs/ROUND3.md`](docs/ROUND3.md#recordings).
+[`docs/ROUND3.md`](docs/ROUND3.md#recordings). Round four's (`docs/recordings/round4/`) are
+frame-stepped clips of the new equipment and moves, matched before-and-after stills of round
+three's build and this one, and frame sequences of the moves it fixed; see
+[`docs/ROUND4.md`](docs/ROUND4.md#before-and-after).
 
 ## Project layout
 
@@ -206,12 +216,15 @@ public/       narration audio and manifest, service worker
 tools/        narration pipeline (Kokoro, offline)
 scripts/      capture, sequence, record, stats, perf (real time), probe (frame by frame)
 e2e/          Playwright tests
-docs/         round-two and round-three notes, plan, scene guide, screenshots, recordings,
+docs/         round-two to round-four notes, plan, scene guide, screenshots, recordings,
               audio auditions
 ```
 
 ## Documentation
 
+* [`docs/ROUND4.md`](docs/ROUND4.md): round four — believable equipment and
+  photolithography: the reference matrix (per machine, with sources), what changed, stills,
+  clips, measurements, and what is still schematic.
 * [`docs/ROUND3.md`](docs/ROUND3.md): round three — smooth playback, continuous
   transitions, machinery: what was reproduced, how it was fixed, before/after measurements,
   and what still needs real hardware.
@@ -230,6 +243,9 @@ This is a teaching model, not a process simulator. The device is drawn in schema
 units with vertical exaggeration. The optics use a Gaussian blur, not a diffraction-limited
 imaging model. The electrical test uses connectivity plus simple gate-length rules, not
 device physics. The equipment is stylised and procedural, the fab layout is conceptual, and
-the yield number is a toy. The narration voice was chosen by automatic measurements; nobody
+the yield number is a toy. Round four made the machines closer to real equipment — closed,
+panelled enclosures that are opened as an illustration's cutaway, a real-scale immersion gap
+shown in a magnified inset — but they remain generic, reference-informed models, not any
+manufacturer's tool. The narration voice was chosen by automatic measurements; nobody
 has listened to it yet. [`ACCURACY.md`](ACCURACY.md) and [`docs/ROUND2.md`](docs/ROUND2.md)
 list each approximation and what is left out.

@@ -166,6 +166,48 @@ source. "Model" says how the simulation reflects it.
   [BYU oxide/nitride colour chart](https://www.cleanroom.byu.edu/color_chart)
   *Model:* colours are computed (normal incidence), not taken from a chart.
 
+* *Round four.* In an immersion scanner the water is held only under the last lens element by
+  a hood that "formed a ring around the last lens element to control the puddle"; the hood's
+  underside rides about 0.1–1 mm over the wafer, air knives holding the water in; the
+  highest-NA DUV lenses are more than 1.2 m tall and weigh more than a tonne.
+  [ASML, immersion](https://www.asml.com/en/news/stories/2023/how-immersion-lithography-saved-moores-law) ·
+  [US 9,632,426](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/9632426) ·
+  [ASML, lenses and mirrors](https://www.asml.com/en/technology/lithography-principles/lenses-and-mirrors)
+  *Model:* the last element is 1 mm and the hood 0.5 mm over the wafer; the film is drawn at
+  that thickness and shown in a magnified, titled schematic inset (heights to scale, widths
+  compressed); the lens is 1.28 m. 193 nm light, the slit and the optical path are drawn only
+  with the light-path overlay, which the picture then labels as an overlay of invisible light.
+* *Round four.* The reticle's pattern side faces the lens, with a pellicle on a frame a few
+  millimetres below it; the reticle stage holds it by vacuum.
+  [US 6,614,504](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/6614504) ·
+  [US 12,346,034](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12346034)
+  *Model:* the reticle's chrome pattern is procedural (one 26 × 33 mm field of 2 × 2 dies at
+  4×, scribe-lane marks, barcode); clear-field for the gate layer, dark-field for contacts.
+* *Round four.* In the track, resist nozzles wait in a solvent-atmosphere standby bath and move
+  over the wafer centre to dispense; a module can carry several resist lines; edge-bead removal
+  is a solvent nozzle at the wafer's edge; bake plates hold the wafer on proximity pins about
+  0.1 mm over the plate under a lid; developer is laid by a slit nozzle and left to stand as a
+  puddle, then rinsed and spun dry. Plates at 90–300 °C do not glow (below the ~525 °C Draper
+  point).
+  [US 8,505,479](https://patents.google.com/patent/US8505479) ·
+  [US 6,453,916](https://patents.google.com/patent/US6453916B1/en) ·
+  [US 11,222,783](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/11222783) ·
+  [US 8,398,319](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/8398319) ·
+  [US 5,897,982](https://patents.google.com/patent/US5897982) ·
+  [Draper point](https://en.wikipedia.org/wiki/Draper_point)
+* *Round four.* In a vacuum cluster the robot blade passes through a slit valve, lift pins take
+  the wafer and set it on the chuck, the blade withdraws and the valve closes to seal the chamber
+  before the process starts; plasma light leaves the chamber only through its viewport.
+  [US 10,023,954](https://patents.google.com/patent/US10023954) ·
+  [US 5,491,603](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/5491603) ·
+  [US 11,862,442](https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/11862442)
+  *Model:* the plasma strikes only after the valve has closed; the chamber is shown whole until
+  its housing is opened, then as a cutaway with hatched sections.
+* *Round four.* Emergency-off buttons are red mushroom buttons on a yellow plate, mounted
+  0.84–1.64 m above the floor.
+  [SEMI S2 checklist](https://www.semi.org/sites/semi.org/files/2020-08/AUX004-00-1100.pdf) ·
+  [installation note](https://docs.rs-online.com/137e/A700000012781286.pdf)
+
 ### Pattern transfer and wiring
 
 * Plasma (dry) etching can cut near-vertical walls; selectivity is the ratio of etch rates
@@ -242,6 +284,10 @@ source. "Model" says how the simulation reflects it.
 | **Back end** | Probe needles, dicing blade (0.8 mm drawn), bond wires and loops are drawn much larger than real; the lead frame is a generic 4-lead strip (VDD, IN, OUT, GND); the prober touches down on every complete die in sequence. | Blades are tens of micrometres thick; probe cards contact many dies at once; packages follow standard outlines. |
 | **Fab bay** | One bay about 50 m long holds every tool of the journey, with the back end behind a glass wall; the explorer says the layout is conceptual. | Front-end fabs are far larger, tools are grouped by type in separate bays, and packaging and test usually happen at other sites. |
 | **Housings and cutaways** *(round two)* | Each machine has one enclosure in the bay; when the story reaches it, the upper front is cut away to show a stylised interior sized to fit. | Real tools are fully enclosed (mini-environments, interlocked covers); nobody sees inside while they run. The cutaway is an explanatory reveal, like a textbook illustration. |
+| **Exteriors** *(round four)* | Panelled enclosures with service doors, grilles, load ports, operator panels and emergency-off buttons; no windows on the track or the scanner; proportions chosen to hold the interior. | No exterior dimensions were found for any production tool in this round's sources, nor evidence for windows on tracks or scanners; exteriors differ by vendor and model. |
+| **Cutaways** *(round four)* | A machine is seen closed from outside, then opened as the camera moves in; cut walls are drawn as hatched sections, and a vacuum chamber is cut open only after its housing. The scale label says "cutaway view · covers drawn removed". | Nobody sees inside a running tool; engineers see plasma through a viewport, and the chambers are sealed. |
+| **Scanner geometry** *(round four)* | The water film is 1 mm (lens) and 0.5 mm (hood) thick; the lens 1.28 m; the stages run on a tiled planar-motor base; the magnified inset compresses widths. | Gaps of about 0.1–1 mm (one patent); real stages, sensors and the lens's internal layout are far more complex. |
+| **Dies close up** *(round four)* | Every die shows one procedural floor plan (arrays, logic, analog blocks, wiring channels, pad ring) whose contrast grows with the layers; the same plan is on the reticle at 4×. | Real dies show the pattern of their top layers through transparent films, with interference colours; no real design was copied. |
 | **Camera and magnification** *(round two)* | The camera moves continuously from the machine to the wafer to your die, then cross-fades to the schematic cross-section, anchored on the die and matched to the viewing direction. The label says "Magnified cross-section · schematic, not to scale" and no magnification factor is quoted. | The real jump from a wafer to a transistor is about four orders of magnitude, far more than any single continuous zoom could show legibly. |
 | **Inspection and metrology** | The tool view scans in a spiral, the wafer view in a line, so particles appear in a different order. The CD-SEM images the one simulated die at each of five sites, with small offsets and noise. | Inspection recipes, sampling plans and SEM imaging physics. |
 
@@ -264,7 +310,8 @@ canonical successful run. Deliberate simplifications in the film's wording:
   rounded description of leading-edge logic (many dozens of mask layers; tens of billions of
   transistors in the largest chips).
 * The narration says "193 nanometres" (deep ultraviolet, ArF); it does not describe
-  immersion, which the app does not model.
+  immersion (round four shows the water film in the scanner and in a magnified inset, but the
+  imaging model is not changed by it).
 
 The inverter layout is illustrative, not from a real design kit. Colours for doping and the
 latent image are highlights: doped silicon looks the same as undoped silicon, and a latent
@@ -288,6 +335,14 @@ image is invisible. The Legend says so.
 * Package-level effects (bond wire parasitics, mold stress) and final-test programs.
 
 ## 4. How the sources were checked
+
+The round-four additions (the equipment reference matrix in [`docs/ROUND4.md`](docs/ROUND4.md),
+the immersion gap, the track's nozzles, plates and developer, vacuum hand-offs, emergency-off
+buttons) were researched in September 2026 through search-engine results only: every page fetch
+(asml.com, tel.com, lamresearch.com, appliedmaterials.com, epfl.ch, patents.google.com,
+en.wikipedia.org, fab.cba.mit.edu, snfguide.stanford.edu) was refused by the build environment's
+network proxy. Each claim is worded no more specifically than the excerpts support, and the
+likeliest source among those an excerpt cited is linked.
 
 The round-three additions (track transfers, the dual-stage exchange, alternating scan
 directions) were checked the same way in September 2026: fetches of www.asml.com,
