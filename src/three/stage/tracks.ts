@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import type { CamRef, Key } from '../../content/shots';
 import type { MachineId } from '../../state/nav';
 import { DEVICE_POSE, type Pose } from '../poses';
-import { fabPoseFor, POSE as FAB_POSE } from '../tools/poses/fab';
+import { BACKEND, BACKEND_WALL_X, BAY, fabPoseFor, POSE as FAB_POSE } from '../tools/poses/fab';
 import { facing } from '../tools/poses/fab';
 import type { ScaleId } from '../../state/store';
 import { anchorsOf, failedStations, stationBoxes, toolMatrix, waferFrame } from './anchors';
@@ -99,13 +99,81 @@ function toolShot(id: MachineId, name: string, out: CamPose): CamPose {
   return setPose(out, 'world', pose, toolMatrix(id, tmpM));
 }
 
+/**
+ * Round four: the free space a camera among the machines keeps to — over the central aisle,
+ * clear of the overhead rail above the load ports (at |z| ≈ 1.85 m), under the ceiling (4.6 m,
+ * with its light fittings) and inside the walls. A framing that wants its camera further back
+ * than that keeps it in the room and widens the lens instead (the establishing shot of a large
+ * machine across the aisle, and the aspect fit of narrow screens, took the camera out through
+ * the ceiling and over the other row of machines).
+ */
+export const ROOM = { aisle: 1.4, ceiling: BAY.ceiling - 0.55, wall: 0.3 } as const;
+
+/** The vertical field of view (degrees) that frames from a distance d what `fov` frames from k·d. */
+export const lensFor = (k: number, fov = BASE_FOV) => THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fov / 2)) * k));
+
+/** One side of the room: a limit on one coordinate (`sign` · coordinate ≤ `at`). */
+const roomSides = (target: THREE.Vector3): [axis: 'x' | 'y' | 'z', sign: 1 | -1, at: number][] => {
+  const backend = target.x < BACKEND_WALL_X;
+  return [
+    ['y', 1, ROOM.ceiling],
+    // over the aisle, the camera does not back out over a row of machines
+    ['z', 1, ROOM.aisle],
+    ['z', -1, ROOM.aisle],
+    ['z', 1, BAY.z1 - ROOM.wall],
+    ['z', -1, -BAY.z0 - ROOM.wall],
+    // the glass wall between the bay and the back-end room, and the end walls
+    ['x', 1, backend ? BACKEND_WALL_X - ROOM.wall : BAY.x1 - ROOM.wall],
+    ['x', -1, backend ? -BACKEND.x0 - ROOM.wall : -BACKEND_WALL_X - ROOM.wall],
+  ];
+};
+
+/**
+ * How far from `target`, along the unit direction `dir` (from the target toward the camera), a
+ * camera standing `from` metres out may back off without leaving the room: it does not cross a
+ * side of it that it has not already crossed (a camera inside a machine, below the ceiling,
+ * stays below it; one over the aisle stays over it).
+ */
+export function roomAlong(target: THREE.Vector3, dir: THREE.Vector3, from: number): number {
+  let s = Infinity;
+  for (const [axis, sign, at] of roomSides(target)) {
+    const d = sign * dir[axis];
+    if (d <= 1e-6 || sign * (target[axis] + dir[axis] * from) > at + 1e-6) continue;
+    s = Math.min(s, (at - sign * target[axis]) / d);
+  }
+  return Math.max(from, s);
+}
+
+const fitDir = new THREE.Vector3();
+
+/**
+ * Pull a framing back by `fit` for a narrow screen, as far as the room allows, and widen its
+ * lens for the rest: the picture keeps its framing, and the camera stays in the room.
+ */
+export function fitInRoom(p: CamPose, fit: number): CamPose {
+  fitDir.subVectors(p.pos, p.target);
+  const len = fitDir.length();
+  if (len < 1e-6) return p;
+  fitDir.divideScalar(len);
+  const want = len * fit;
+  const s = Math.min(want, roomAlong(p.target, fitDir, len));
+  p.pos.copy(p.target).addScaledVector(fitDir, s);
+  if (want > s + 1e-9) p.fov = lensFor(want / s, fovOf(p));
+  return p;
+}
+
 const MACHINE_ELEV = 0.42; // ~24° above horizontal
 const MACHINE_YAW = 0.52; // ~30° off the machine's front axis, toward the east
-const HALF_FOV = (32 / 2) * (Math.PI / 180);
+const HALF_FOV = (BASE_FOV / 2) * (Math.PI / 180);
 const mc = new THREE.Vector3();
 const ms = new THREE.Vector3();
+const md = new THREE.Vector3();
 
-/** The whole machine from the aisle side, at a three-quarter angle, sized to its footprint. */
+/**
+ * The whole machine from the aisle side, at a three-quarter angle, sized to its footprint.
+ * (Round four) from the far side of the aisle at most, under the ceiling: a large machine is
+ * framed with a wider lens rather than from over the machines of the other row.
+ */
 export function machinePose(id: MachineId, out: CamPose): CamPose {
   const box = stationBoxes.get(id);
   if (!box) return toolShot(id, 'establish', out);
@@ -116,11 +184,13 @@ export function machinePose(id: MachineId, out: CamPose): CamPose {
   const f = facing(id);
   out.space = 'world';
   out.scale = 'tool';
-  out.fov = undefined;
   out.exterior = false;
   out.target.set(mc.x, Math.min(1.05, mc.y), mc.z);
   const ce = Math.cos(MACHINE_ELEV);
-  out.pos.set(Math.sin(MACHINE_YAW) * ce, Math.sin(MACHINE_ELEV), f * Math.cos(MACHINE_YAW) * ce).multiplyScalar(dist).add(out.target);
+  md.set(Math.sin(MACHINE_YAW) * ce, Math.sin(MACHINE_ELEV), f * Math.cos(MACHINE_YAW) * ce);
+  const d = Math.min(dist, roomAlong(out.target, md, 0));
+  out.pos.copy(out.target).addScaledVector(md, d);
+  out.fov = d < dist - 1e-6 ? lensFor(dist / d) : undefined;
   return out;
 }
 

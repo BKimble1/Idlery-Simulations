@@ -46,7 +46,7 @@ import { finishPrograms } from './programs';
 import { quality } from './quality';
 import { stageTime } from './time';
 import { handoverAt, legAt, planTransition, type Leg } from './flights';
-import { BASE_FOV, copyPose, evalTrack, evalTrackStill, fovOf, makePose, makeSample, resolve, type CamPose, type CamSample, type Space } from './tracks';
+import { BASE_FOV, copyPose, evalTrack, evalTrackStill, fitInRoom, fovOf, makePose, makeSample, resolve, type CamPose, type CamSample, type Space } from './tracks';
 
 // ───────────────────────────── flights ─────────────────────────────
 
@@ -199,7 +199,13 @@ const DESIGN_ASPECT = 1.4;
 const BAY_BOX = new THREE.Box3(new THREE.Vector3(BACKEND.x0 + 0.5, 0.2, BAY.z0 + 0.5), new THREE.Vector3(BAY.x1 - 0.5, 30, BAY.z1 - 0.5));
 
 function fitPose(p: CamPose, fit: number) {
-  if (fit === 1 || p.fov !== undefined) return; // composed framings are already fitted
+  if (fit === 1) return;
+  // (round four) among the machines, back only as far as the room allows, then a wider lens
+  if (p.space === 'world' && p.scale !== 'fab') {
+    fitInRoom(p, fit);
+    return;
+  }
+  if (p.fov !== undefined) return; // composed framings are already fitted
   p.pos.sub(p.target).multiplyScalar(fit).add(p.target);
 }
 
@@ -337,6 +343,9 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
     /** The flight a retarget replaced, still blended in for a moment (continuous motion). */
     prev: null as { flight: Flight; since: number } | null,
     freeLook: false,
+    /** The lens the learner's free look keeps (round four: a framing kept to the room may have
+     * widened it; taking the camera does not snap it back). */
+    freeFov: undefined as number | undefined,
     live: makeSample(),
     guided: makeSample(),
     blendTmp: makeSample(),
@@ -492,6 +501,7 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
       const s = st.current;
       const mode = useApp.getState().mode;
       if (mode !== 'learn' && mode !== 'explore') return;
+      if (!s.freeLook) s.freeFov = shown(s.live).fov;
       s.freeLook = true;
       s.flight = null;
       s.prev = null;
@@ -762,6 +772,7 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
         s.owner = f.to;
         if (f.thenFree) {
           s.freeLook = true;
+          s.freeFov = s.live.a.fov;
           const p = s.live.a;
           controls?.setLookAt(p.pos.x, p.pos.y, p.pos.z, p.target.x, p.target.y, p.target.z, false);
         }
@@ -775,7 +786,7 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
         controls.getTarget(s.live.a.target);
         s.live.a.space = s.lastSpace;
         s.live.a.scale = undefined;
-        s.live.a.fov = undefined;
+        s.live.a.fov = s.freeFov;
         s.live.mix = 0;
       }
       s.owner = a.mode === 'home' ? null : want;
