@@ -579,8 +579,10 @@ function WorldLighting() {
   return (
     <>
       <primitive object={target} />
-      <ambientLight intensity={0.12} />
-      <hemisphereLight ref={hemi} args={['#ffffff', '#6b6f78', 0.35]} />
+      {/* (round four: the cleanroom environment now gives most of the fill; these only lift the
+          undersides a little) */}
+      <ambientLight intensity={0.06} />
+      <hemisphereLight ref={hemi} args={['#ffffff', '#6b6f78', 0.18]} />
       <directionalLight
         ref={key}
         target={target}
@@ -607,23 +609,43 @@ function WorldLighting() {
 }
 
 /**
- * Studio environment: bright softboxes on a dark surround, so steel shows crisp reflections
- * instead of a flat grey. Rendered once, at mount: drei's Environment renders its cube map
- * again whenever it re-renders (its effect depends on its children), so it must not
- * re-render with the lighting around it. It did, at every change of lesson or hover: a cube
- * map and its prefiltering each time, and those re-renders came out a little darker than
- * the first, so the shading of every machine and of the cross-section shifted at once.
+ * The bay as polished and brushed surfaces see it (round four): a cleanroom, not a photo
+ * studio. A ceiling of fan-filter units whose light panels run in rows overhead, pale walls
+ * with the darker band of tool fronts along them, and a grey raised floor below. Steel then
+ * reads as brushed steel (light, with the ceiling's rows running across it) instead of a dark
+ * mirror, a polished wafer shows the grid of ceiling lights, and dark glass shows the room.
+ *
+ * Rendered once, at mount: drei's Environment renders its cube map again whenever it
+ * re-renders (its effect depends on its children), so it must not re-render with the lighting
+ * around it. It did, at every change of lesson or hover: a cube map and its prefiltering each
+ * time, and those re-renders came out a little darker than the first, so the shading of every
+ * machine and of the cross-section shifted at once.
  */
+const CEILING_PANELS = (() => {
+  // rows of light panels along the bay (x), 1.2 m apart across it (z), as the ceiling tiles
+  const out: [number, number][] = [];
+  for (let z = -4.2; z <= 4.21; z += 1.2) for (let x = -7.5; x <= 7.51; x += 2.5) out.push([x, z]);
+  return out;
+})();
 const WorldEnvironment = memo(function WorldEnvironment() {
   return (
     <Environment resolution={256} frames={1}>
-      <color attach="background" args={['#565a62']} />
-      <Lightformer form="rect" intensity={3.4} color="#ffffff" position={[0, 5, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[9, 9, 1]} />
-      <Lightformer form="rect" intensity={2.4} color="#ffffff" position={[-5, 1.8, 1.5]} rotation={[0, Math.PI / 2, 0]} scale={[1.6, 7, 1]} />
-      <Lightformer form="rect" intensity={2.0} color="#ffffff" position={[5, 2.2, -1]} rotation={[0, -Math.PI / 2, 0]} scale={[1.6, 7, 1]} />
-      <Lightformer form="rect" intensity={1.4} color="#f2f4ff" position={[0, 1.6, 6]} rotation={[0, Math.PI, 0]} scale={[7, 1.2, 1]} />
-      <Lightformer form="rect" intensity={1.0} color="#ffffff" position={[0, 1.2, -6]} rotation={[0, 0, 0]} scale={[8, 1.5, 1]} />
-      <Lightformer form="ring" intensity={1.2} color="#ffffff" position={[3, 3.5, -4]} scale={1.6} />
+      <color attach="background" args={['#5e636b']} />
+      {/* ceiling: the fan-filter grid with its linear lights */}
+      <Lightformer form="rect" intensity={1.05} color="#e6e9ec" position={[0, 4.7, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[26, 26, 1]} />
+      {CEILING_PANELS.map(([x, z]) => (
+        <Lightformer key={`${x}:${z}`} form="rect" intensity={4.2} color="#ffffff" position={[x, 4.6, z]} rotation={[Math.PI / 2, 0, 0]} scale={[2.1, 0.3, 1]} />
+      ))}
+      {/* the raised floor, a darker grey */}
+      <Lightformer form="rect" intensity={0.32} color="#9aa0a6" position={[0, -1.2, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[30, 30, 1]} />
+      {/* pale upper walls; the dark band of tool fronts and windows along each side below */}
+      <Lightformer form="rect" intensity={1.0} color="#eef0f2" position={[0, 3.1, -7]} rotation={[0, 0, 0]} scale={[30, 2.2, 1]} />
+      <Lightformer form="rect" intensity={1.0} color="#eef0f2" position={[0, 3.1, 7]} rotation={[0, Math.PI, 0]} scale={[30, 2.2, 1]} />
+      <Lightformer form="rect" intensity={0.5} color="#30353c" position={[0, 1.0, -6.9]} rotation={[0, 0, 0]} scale={[30, 2.0, 1]} />
+      <Lightformer form="rect" intensity={0.5} color="#30353c" position={[0, 1.0, 6.9]} rotation={[0, Math.PI, 0]} scale={[30, 2.0, 1]} />
+      {/* the bay's far ends: bright glazing to the east, the back-end room's glass wall to the west */}
+      <Lightformer form="rect" intensity={1.6} color="#f4f6f8" position={[-9, 2.4, 0]} rotation={[0, Math.PI / 2, 0]} scale={[6, 2.6, 1]} />
+      <Lightformer form="rect" intensity={1.3} color="#f4f6f8" position={[9, 2.4, 0]} rotation={[0, -Math.PI / 2, 0]} scale={[6, 2.6, 1]} />
     </Environment>
   );
 });
