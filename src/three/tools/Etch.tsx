@@ -3,9 +3,12 @@
  * (Fab.tsx, etchCluster): an equipment front end (EFEM) across the front with three load ports
  * and an atmospheric robot, a load lock behind it, a square vacuum transfer chamber with a SCARA
  * wafer robot, and three single-wafer process chambers around it — the etch chamber on the
- * right, a second etch chamber behind and a resist-strip (ash) chamber on the left. The chamber
- * in use is drawn in cutaway. Each chamber is a cylindrical aluminium vacuum vessel with an
- * electrostatic chuck on a cantilevered cathode, a turbomolecular pump hanging below a pendulum
+ * right, a second etch chamber behind and a resist-strip (ash) chamber on the left. Every
+ * chamber is a whole, closed vessel; the one in use is opened as a technical cutaway (round
+ * four: a wedge toward the aisle is cut away, its cut faces drawn as hatched sections) only
+ * once the machine's housing has opened, and it closes again before the housing does, with
+ * the transfer chamber's lid (see SectionCut, innerCut). Each chamber is a cylindrical
+ * aluminium vacuum vessel with an electrostatic chuck on a cantilevered cathode, a turbomolecular pump hanging below a pendulum
  * valve, gas lines and an optical-emission viewport. Its top depends on the process:
  *  - silicon / polysilicon etch: a ceramic window with a flat inductive (ICP) coil;
  *  - oxide (contact) etch: a showerhead top electrode, capacitively coupled (CCP);
@@ -28,6 +31,9 @@ import { MAT, type MatKey } from '../materials';
 import { Box, CleanFloor, Cyl, LightTower, mat, StandaloneOnly } from '../kit/parts';
 import { Wafer } from '../wafer/Wafer';
 import type { ToolProps } from './index';
+import { everything, SectionCut, slicePlane, wedgePlanes } from '../kit/section';
+import { useStationEnv } from '../stage/context';
+import { innerCut } from './Fab';
 
 type V2 = [number, number];
 type V3 = [number, number, number];
@@ -76,6 +82,8 @@ const E_BASE: V2 = [LLW[0], LLW[1] + EXT_LEN + BLADE + D_RET];
 
 /** Cutaway of the process chamber: centre angle (from +z toward +x) and width, radians. */
 const CUT: [number, number] = [0.48, 1.95];
+/** Beyond this radius the chamber has nothing the wedge cuts (its flange, 0.3 m, with a margin). */
+const CUT_REACH = 0.36;
 const SLIT_PHI = (3 * Math.PI) / 2; // direction from the chamber to the transfer chamber (−x)
 
 // ───────────────────────────── local materials ─────────────────────────────
@@ -848,7 +856,7 @@ function setupBlades(mesh: THREE.InstancedMesh | null, stator: boolean, nStage: 
   mesh.userData.done = true;
 }
 
-function TurboPump({ cut, rotor }: { cut: [number, number] | null; rotor?: React.RefObject<THREE.Group | null> }) {
+function TurboPump({ cut, rotor, open = false }: { cut: [number, number] | null; rotor?: React.RefObject<THREE.Group | null>; open?: boolean }) {
   const blades = useMemo(() => {
     const g = new THREE.BoxGeometry(0.084, 0.0016, 0.013);
     g.translate(0.056 + 0.042, 0, 0);
@@ -864,7 +872,7 @@ function TurboPump({ cut, rotor }: { cut: [number, number] | null; rotor?: React
       {[0.35, 0.37, 0.39, 0.41, 0.43].map((y) => (
         <Turned key={y} profile={[[0.14, y - 0.004], [0.168, y - 0.004], [0.168, y + 0.004], [0.14, y + 0.004]]} cut={cut} m="aluminum" />
       ))}
-      {cut && (
+      {(cut || open) && (
         <>
           <group ref={rotor}>
             <Cyl r={0.055} h={0.24} position={[0, 0.56, 0]} m="steel" />
@@ -881,27 +889,30 @@ function TurboPump({ cut, rotor }: { cut: [number, number] | null; rotor?: React
 }
 
 /** Support frame, pendulum valve and turbo pump under a chamber. */
-function Undercarriage({ cut, rotor }: { cut: [number, number] | null; rotor?: React.RefObject<THREE.Group | null> }) {
+function Undercarriage({ cut, rotor, open = false }: { cut: [number, number] | null; rotor?: React.RefObject<THREE.Group | null>; open?: boolean }) {
   return (
     <group>
-      {[
-        [0.27, 0.27],
-        [-0.27, 0.27],
-        [0.27, -0.27],
-        [-0.27, -0.27],
-      ].map(([x, z]) => (
-        <Box key={`${x}${z}`} size={[0.04, 0.78, 0.04]} position={[x, 0.39, z]} m="steelSatin" radius={0.004} />
-      ))}
-      {[-0.27, 0.27].map((z) => (
-        <Box key={`bx${z}`} size={[0.58, 0.03, 0.04]} position={[0, 0.785, z]} m="steelSatin" radius={0.004} />
-      ))}
-      {[-0.27, 0.27].map((x) => (
-        <Box key={`bz${x}`} size={[0.04, 0.03, 0.58]} position={[x, 0.785, 0]} m="steelSatin" radius={0.004} />
-      ))}
+      {/* the frame stays whole when the chamber is cut open */}
+      <group userData={{ whole: true }}>
+        {[
+          [0.27, 0.27],
+          [-0.27, 0.27],
+          [0.27, -0.27],
+          [-0.27, -0.27],
+        ].map(([x, z]) => (
+          <Box key={`${x}${z}`} size={[0.04, 0.78, 0.04]} position={[x, 0.39, z]} m="steelSatin" radius={0.004} />
+        ))}
+        {[-0.27, 0.27].map((z) => (
+          <Box key={`bx${z}`} size={[0.58, 0.03, 0.04]} position={[0, 0.785, z]} m="steelSatin" radius={0.004} />
+        ))}
+        {[-0.27, 0.27].map((x) => (
+          <Box key={`bz${x}`} size={[0.04, 0.03, 0.58]} position={[x, 0.785, 0]} m="steelSatin" radius={0.004} />
+        ))}
+      </group>
       {/* pendulum valve body (the gate swings sideways into the wide end) */}
       <Box size={[0.5, 0.07, 0.36]} position={[-0.07, 0.765, -0.02]} m="aluminum" radius={0.03} />
       <Cyl r={0.045} h={0.06} position={[-0.26, 0.83, -0.02]} m="black" />
-      <TurboPump cut={cut} rotor={rotor} />
+      <TurboPump cut={cut} rotor={rotor} open={open} />
       {/* foreline to the dry pump in the sub-fab */}
       <Pipe pts={[[-0.13, 0.38, 0.02], [-0.33, 0.38, 0.02], [-0.33, 0.38, -0.34], [-0.33, 0.02, -0.34]]} r={0.022} bend={0.06} m="steelSatin" />
     </group>
@@ -963,10 +974,36 @@ function Face({ rot }: { rot: number }) {
   );
 }
 
-/** Transfer chamber (lid off) on its mainframe, with the load lock in front of it. */
-function TransferModule({ slitLL, doorLL, pinsLL }: { slitLL: React.RefObject<THREE.Mesh | null>; doorLL: React.RefObject<THREE.Mesh | null>; pinsLL: React.RefObject<(THREE.Mesh | null)[]> }) {
+/**
+ * Transfer chamber on its mainframe, with the load lock in front of it. Its lid (with a small
+ * viewport) is drawn removed, wiped away from the front, as the process chamber is opened.
+ */
+function TransferModule({
+  slitLL,
+  doorLL,
+  pinsLL,
+  lidPlanes,
+  group,
+}: {
+  slitLL: React.RefObject<THREE.Mesh | null>;
+  doorLL: React.RefObject<THREE.Mesh | null>;
+  pinsLL: React.RefObject<(THREE.Mesh | null)[]>;
+  lidPlanes: THREE.Plane[];
+  group: React.RefObject<THREE.Group | null>;
+}) {
   return (
-    <group position={[HUB[0], 0, HUB[1]]}>
+    <group ref={group} position={[HUB[0], 0, HUB[1]]}>
+      <SectionCut planes={lidPlanes}>
+        {/* just inside the bay model's lid, which it replaces when the housing opens */}
+        <Box size={[1.08, 0.028, 1.08]} position={[0, 1.134, 0]} m={ANODISED} radius={0.006} />
+        <Cyl r={0.11} h={0.012} position={[0, 1.152, 0]} m="steelSatin" seg={40} />
+        <mesh position={[0, 1.1585, 0]} rotation={[-Math.PI / 2, 0, 0]} material={MAT.glassDark}>
+          <circleGeometry args={[0.085, 40]} />
+        </mesh>
+        {[-0.44, 0.44].map((x) => (
+          <Box key={x} size={[0.05, 0.03, 0.14]} position={[x, 1.163, 0]} m="steelSatin" radius={0.006} />
+        ))}
+      </SectionCut>
       {/* mainframe plinth under the transfer chamber and load lock */}
       <Box size={[1.16, DECK_Y - 0.08, 1.62]} position={[0, 0.04 + (DECK_Y - 0.08) / 2, 0.23]} m="panelGray" radius={0.02} />
       <Box size={[1.14, 0.08, 1.6]} position={[0, 0.04, 0.23]} m="panelDark" radius={0.01} />
@@ -1178,8 +1215,14 @@ export default function Etch({ variant }: ToolProps) {
   const { id } = useStep();
   const R = RECIPES[id] ?? (variant === 'ash' ? RECIPES.strip : RECIPES['gate-etch']);
   const top = R.top;
-  const cut = CUT;
   const L = useMemo(() => layoutFor(R.slot), [R.slot]);
+  // The chamber in use and the transfer chamber's lid open after the housing (see innerCut)
+  const { station } = useStationEnv();
+  const chamber = useRef<THREE.Group>(null);
+  const hub = useRef<THREE.Group>(null);
+  const wedge = useMemo(() => [new THREE.Plane(), new THREE.Plane()], []);
+  const lidPlanes = useMemo(() => [new THREE.Plane(), everything(new THREE.Plane())], []);
+  const fwd = useMemo(() => new THREE.Vector3(0, 0, 1), []);
 
   const wafer = useRef<THREE.Group>(null);
   const jb = useRef<THREE.Group>(null);
@@ -1231,6 +1274,16 @@ export default function Etch({ variant }: ToolProps) {
   const jointsE = useMemo(() => ({ b: 0, e: 0, w: 0 }), []);
 
   useProgressFrame((p, t) => {
+    const open = station ? innerCut(station) : 1;
+    if (chamber.current) {
+      chamber.current.updateWorldMatrix(true, false);
+      wedgePlanes(wedge, CUT, open, CUT_REACH, chamber.current.matrixWorld);
+    }
+    if (hub.current) {
+      hub.current.updateWorldMatrix(true, false);
+      const e = open * open * (3 - 2 * open);
+      slicePlane(lidPlanes[0], fwd, 0.6 - 1.2 * e, hub.current.matrixWorld);
+    }
     simulate(p, R, f, L);
     ik(f.th, f.d, joints);
     if (jb.current) jb.current.rotation.y = joints.b;
@@ -1271,24 +1324,31 @@ export default function Etch({ variant }: ToolProps) {
     <group>
       <CleanFloor size={12} />
 
-      {/* ── the process chamber in use (cutaway) ── */}
-      <group {...slotTransform(R.slot)}>
-        <ChamberBody cut={cut} />
-        <Pedestal kind={top === 'ash' ? 'heater' : 'esc'} cut={cut} pins={pinsPC} />
-        {top === 'icp' && <IcpTop cut={cut} />}
-        {top === 'ccp' && <CcpTop cut={cut} />}
-        {top === 'ash' && <AshTop cut={cut} />}
-        {GLOWS[top].map((g, i) => (
-          <PlasmaVolume key={`${top}${i}`} spec={g} material={glowMats[i]} />
-        ))}
-        <group rotation={[0, SLIT_PHI - Math.PI / 2, 0]}>
-          <group position={[0.262, 0, 0]}>
-            <SlitValve length={R_PC - 0.56 - 0.262 + 0.004} gate={slitPC} />
+      {/* ── the process chamber in use: whole, cut open once the housing is (see above) ── */}
+      <group ref={chamber} {...slotTransform(R.slot)}>
+        <SectionCut key={`${R.slot}:${top}`} planes={wedge}>
+          <ChamberBody cut={null} />
+          <Pedestal kind={top === 'ash' ? 'heater' : 'esc'} cut={null} pins={pinsPC} />
+          {top === 'icp' && <IcpTop cut={null} />}
+          {top === 'ccp' && <CcpTop cut={null} />}
+          {top === 'ash' && <AshTop cut={null} />}
+          {GLOWS[top].map((g, i) => (
+            <PlasmaVolume key={`${top}${i}`} spec={g} material={glowMats[i]} />
+          ))}
+          <group rotation={[0, SLIT_PHI - Math.PI / 2, 0]}>
+            <group position={[0.262, 0, 0]}>
+              <SlitValve length={R_PC - 0.56 - 0.262 + 0.004} gate={slitPC} />
+            </group>
           </group>
-        </group>
-        <OesViewport glow={viewGlow} />
-        <Undercarriage cut={cut} />
-        <ChamberLines top={top} />
+          {/* (its window's glow is animated: it stays whole, outside the wedge anyway) */}
+          <group userData={{ whole: true }}>
+            <OesViewport glow={viewGlow} />
+          </group>
+          <Undercarriage cut={null} open />
+          <group userData={{ whole: true }}>
+            <ChamberLines top={top} />
+          </group>
+        </SectionCut>
       </group>
       {/* the other chambers, closed: etch on the right and behind, the ash chamber on the left */}
       {R.slot !== 'right' && <ClosedChamber slot="right" top="icp" />}
@@ -1296,7 +1356,7 @@ export default function Etch({ variant }: ToolProps) {
       {R.slot !== 'left' && <ClosedChamber slot="left" top="ash" />}
 
       {/* ── transfer chamber and robot, load lock, EFEM ── */}
-      <TransferModule slitLL={slitLL} doorLL={doorLL} pinsLL={pinsLL} />
+      <TransferModule slitLL={slitLL} doorLL={doorLL} pinsLL={pinsLL} lidPlanes={lidPlanes} group={hub} />
       <Robot b={jb} e={je} w={jw} />
       <Efem robot={efemRobot} />
 

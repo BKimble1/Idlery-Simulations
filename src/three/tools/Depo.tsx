@@ -2,7 +2,10 @@
  * CVD cluster tool (illustrative, no manufacturer's design): a hexagonal vacuum transfer
  * chamber with a frog-leg robot, four single-wafer process chambers with lids, and two load
  * locks behind an equipment front end (EFEM) that faces the aisle (+z). The active chamber,
- * on the west side (−x), is drawn in cutaway, opened toward the front left:
+ * on the west side (−x), is a whole, closed chamber until the machine's housing has opened;
+ * then it is opened as a technical cutaway toward the front left (round four: a wedge is cut
+ * away, its cut faces hatched sections), with the transfer chamber's lid, and it closes again
+ * before the housing does (see SectionCut, innerCut). Inside it:
  * a ceramic heater on a stem that rises to the process position under a gas showerhead,
  * fixed lift pins that take the wafer when the heater drops, a gas feed and a pumping line.
  *
@@ -31,6 +34,8 @@ import { Box, CleanFloor, Cyl, LightTower, mat, StandaloneOnly } from '../kit/pa
 import { useStationEnv } from '../stage/context';
 import { makeLiveCoat, Wafer } from '../wafer/Wafer';
 import type { ToolProps } from './index';
+import { everything, SectionCut, slicePlane, wedgePlanes } from '../kit/section';
+import { innerCut } from './Fab';
 
 type V2 = [number, number];
 type V3 = [number, number, number];
@@ -65,6 +70,8 @@ const D_RET = 0.05;
 
 // cutaway of the active chamber, facing the front left (lathe angle from +z toward +x)
 const CUT: [number, number] = [-0.6, 2.0];
+/** Beyond this radius the active chamber has nothing the wedge cuts (its lid, 0.3 m, with a margin). */
+const CUT_REACH = 0.36;
 
 // ───────────────────────────── materials ─────────────────────────────
 
@@ -588,12 +595,16 @@ function ActiveChamber({
   showerTex,
   rf,
   glowMat,
+  group,
+  planes,
 }: {
   heater: React.RefObject<THREE.Group | null>;
   slit: React.RefObject<THREE.Mesh | null>;
   showerTex: THREE.Texture;
   rf: boolean;
   glowMat: THREE.ShaderMaterial | null;
+  group: React.RefObject<THREE.Group | null>;
+  planes: THREE.Plane[];
 }) {
   const [x, z] = posOf('A', R_CH);
   const slitPhi = Math.atan2(-x, -z);
@@ -603,9 +614,33 @@ function ActiveChamber({
     return g;
   }, []);
   return (
-    <group position={[x, 0, z]}>
-      <ChamberShell cut={CUT} slitPhi={slitPhi} />
-      <Lid cut={CUT} rf={rf} back={slitPhi} />
+    <group ref={group} position={[x, 0, z]}>
+      <SectionCut key={rf ? 'rf' : 'thermal'} planes={planes}>
+        <ActiveChamberParts heater={heater} slit={slit} showerTex={showerTex} rf={rf} slitPhi={slitPhi} />
+        {glowMat && <mesh geometry={glowGeo} material={glowMat} position={[0, HEAT_HI + 0.004, 0]} renderOrder={5} />}
+      </SectionCut>
+    </group>
+  );
+}
+
+/** The active chamber's own parts, in its frame (drawn cut open by ActiveChamber). */
+function ActiveChamberParts({
+  heater,
+  slit,
+  showerTex,
+  rf,
+  slitPhi,
+}: {
+  heater: React.RefObject<THREE.Group | null>;
+  slit: React.RefObject<THREE.Mesh | null>;
+  showerTex: THREE.Texture;
+  rf: boolean;
+  slitPhi: number;
+}) {
+  return (
+    <group>
+      <ChamberShell cut={null} slitPhi={slitPhi} />
+      <Lid cut={null} rf={rf} back={slitPhi} />
       {/* process gas comes up the back of the chamber from the gas box in the frame */}
       <Pipe
         pts={[
@@ -619,11 +654,12 @@ function ActiveChamber({
         m="steel"
       />
       <mesh position={[0, FACE_Y - 0.0004, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.199, 64, Math.PI / 2 - (CUT[0] + CUT[1] / 2 + TAU - CUT[1]), TAU - CUT[1]]} />
+        <circleGeometry args={[0.199, 64]} />
         <meshStandardMaterial map={showerTex} metalness={0.7} roughness={0.35} side={THREE.DoubleSide} />
       </mesh>
-      {/* heater on its stem (rises to the process position) */}
-      <group ref={heater}>
+      {/* heater on its stem (rises to the process position; its glow is animated, so it stays
+          whole, as the wafer on it does) */}
+      <group ref={heater} userData={{ whole: true }}>
         <Turned profile={[[0, -0.032], [0.168, -0.032], [0.168, 0], [0, 0]]} m={HEATER} />
         <Cyl r={0.035} h={0.3} position={[0, -0.18, 0]} m="steelSatin" />
       </group>
@@ -640,9 +676,10 @@ function ActiveChamber({
       {/* bellows and lift drive under the chamber */}
       <Cyl r={0.05} h={0.12} position={[0, 0.76, 0]} m="steelSatin" />
       <Cyl r={0.08} h={0.18} position={[0, 0.6, 0]} m="black" />
-      <Frame />
-      <Pipe pts={[[-0.2, 0.83, -0.12], [-0.36, 0.83, -0.12], [-0.36, 0.08, -0.12]]} r={0.028} bend={0.06} m="steelSatin" />
-      {glowMat && <mesh geometry={glowGeo} material={glowMat} position={[0, HEAT_HI + 0.004, 0]} renderOrder={5} />}
+      <group userData={{ whole: true }}>
+        <Frame />
+        <Pipe pts={[[-0.2, 0.83, -0.12], [-0.36, 0.83, -0.12], [-0.36, 0.08, -0.12]]} r={0.028} bend={0.06} m="steelSatin" />
+      </group>
     </group>
   );
 }
@@ -663,13 +700,25 @@ function SlitValve({ length, gate }: { length: number; gate?: React.RefObject<TH
   );
 }
 
-/** Hexagonal transfer chamber with slit openings on every face (open top, cut away). */
-function TransferChamber() {
+/**
+ * Hexagonal transfer chamber with slit openings on every face; its lid (with a small viewport)
+ * is drawn removed, wiped away from the front, as the active chamber is opened.
+ */
+function TransferChamber({ group, lidPlanes }: { group: React.RefObject<THREE.Group | null>; lidPlanes: THREE.Plane[] }) {
   const faces = [0, 60, 120, 180, 240, 300];
   const side = (2 * TC_IN) / Math.sqrt(3);
   const H = 1.12;
   return (
-    <group>
+    <group ref={group}>
+      <SectionCut planes={lidPlanes}>
+        <mesh position={[0, H + 0.014, 0]} material={MAT.aluminum} castShadow>
+          <cylinderGeometry args={[side + 0.035, side + 0.035, 0.028, 6]} />
+        </mesh>
+        <Cyl r={0.11} h={0.012} position={[0, H + 0.034, 0]} m="steelSatin" seg={40} />
+        <mesh position={[0, H + 0.0405, 0]} rotation={[-Math.PI / 2, 0, 0]} material={MAT.glassDark}>
+          <circleGeometry args={[0.085, 40]} />
+        </mesh>
+      </SectionCut>
       {/* hexagonal mainframe plinth and floor */}
       <mesh position={[0, (DECK_Y - 0.02) / 2, 0]} material={MAT.panel} castShadow receiveShadow>
         <cylinderGeometry args={[side + 0.08, side + 0.08, DECK_Y - 0.02, 6]} />
@@ -844,7 +893,13 @@ function Status({ R }: { R: Recipe }) {
 
 export default function Depo({ variant }: ToolProps) {
   const { id } = useStep();
-  const { placed } = useStationEnv();
+  const { placed, station } = useStationEnv();
+  // The active chamber and the transfer chamber's lid open after the housing (see innerCut)
+  const chamber = useRef<THREE.Group>(null);
+  const tc = useRef<THREE.Group>(null);
+  const wedge = useMemo(() => [new THREE.Plane(), new THREE.Plane()], []);
+  const lidPlanes = useMemo(() => [new THREE.Plane(), everything(new THREE.Plane())], []);
+  const fwd = useMemo(() => new THREE.Vector3(0, 0, 1), []);
   const v = variant && RECIPES[variant] ? variant : id === 'pmd' ? 'oxide' : id === 'passivate' ? 'pass' : 'poly';
   const R = RECIPES[v];
 
@@ -890,6 +945,16 @@ export default function Depo({ variant }: ToolProps) {
   const lampCol = useMemo(() => new THREE.Color('#ffc978'), []);
 
   useProgressFrame((p, t) => {
+    const open = station ? innerCut(station) : 1;
+    if (chamber.current) {
+      chamber.current.updateWorldMatrix(true, false);
+      wedgePlanes(wedge, CUT, open, CUT_REACH, chamber.current.matrixWorld);
+    }
+    if (tc.current) {
+      tc.current.updateWorldMatrix(true, false);
+      const e = open * open * (3 - 2 * open);
+      slicePlane(lidPlanes[0], fwd, 0.7 - 1.4 * e, tc.current.matrixWorld);
+    }
     simulate(p, R, f);
     // frog-leg kinematics: upper arms at th ± phi, forearms meet at the wrist
     const d = Math.max(0.01, f.d);
@@ -941,9 +1006,9 @@ export default function Depo({ variant }: ToolProps) {
   return (
     <group>
       <CleanFloor size={12} />
-      <TransferChamber />
+      <TransferChamber group={tc} lidPlanes={lidPlanes} />
       <FrogLeg hub={hub} upper={upper} fore={fore} wrist={wrist} />
-      <ActiveChamber heater={heater} slit={slitA} showerTex={showerTex} rf={R.plasma !== null} glowMat={glowMat} />
+      <ActiveChamber heater={heater} slit={slitA} showerTex={showerTex} rf={R.plasma !== null} glowMat={glowMat} group={chamber} planes={wedge} />
       <ClosedChamber port="B" lamp={v === 'poly' ? lamp : undefined} />
       <ClosedChamber port="C" />
       <ClosedChamber port="D" />

@@ -32,7 +32,7 @@ import { Label } from '../labels';
 import { stationBoxes, stationMatrix } from '../stage/anchors';
 import { stageTime } from '../stage/time';
 import { TOOL_POSES } from '../poses';
-import { SECTION_SRGB } from '../materials';
+import { sectionMaterial as cutMaterial } from '../kit/section';
 
 // ───────────────────────────── materials ─────────────────────────────
 //
@@ -399,6 +399,43 @@ function body(K: Kit, w: number, h: number, d: number, x = 0, z = 0, m: FabMat =
   K.box(m, w, h - 0.1, d, x, 0.1 + (h - 0.1) / 2, z, 0.035);
   if (hollow) K.cavity(w - 2 * WALL, h - 0.1 - 2 * WALL, d - 2 * WALL, x, 0.1 + (h - 0.1) / 2, z);
 }
+/**
+ * A body whose elevation is not a rectangle (round four): the outline `pts` (x, y; counter-
+ * clockwise, edges along the axes) extruded from z0 to z1, its edges chamfered by `c` within
+ * the outline. With `hollow`, it gets the matching inside, WALL in from every face (see
+ * Kit.cavity): one closed shell, with no inner floor where two blocks of it meet.
+ */
+function prism(K: Kit, k: FabMat, pts: [number, number][], z0: number, z1: number, c = 0.03, hollow = false) {
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(offsetOutline(pts, c).map(([x, y]) => new THREE.Vector2(x, y))), {
+    depth: z1 - z0 - 2 * c,
+    bevelEnabled: c > 0,
+    bevelThickness: c,
+    bevelSize: c,
+    bevelSegments: 1,
+  });
+  g.translate(0, 0, z0 + c);
+  K.add(k, g);
+  if (!hollow || !K.lit) return;
+  const cav = new THREE.ExtrudeGeometry(new THREE.Shape(offsetOutline(pts, WALL).map(([x, y]) => new THREE.Vector2(x, y))), {
+    depth: z1 - z0 - 2 * WALL,
+    bevelEnabled: false,
+  });
+  cav.translate(0, 0, z0 + WALL);
+  cav.deleteAttribute('uv');
+  K.add('interior', inward(mergeVertices(cav, 1e-4)));
+}
+/** An axis-aligned outline (counter-clockwise) moved inward by d on every edge. */
+function offsetOutline(pts: [number, number][], d: number): [number, number][] {
+  const n = pts.length;
+  return pts.map(([x, y], i) => {
+    const [px, py] = pts[(i + n - 1) % n];
+    const [nx, ny] = pts[(i + 1) % n];
+    // inward normals (left of each edge, for a counter-clockwise outline) of the edges in and out
+    const a = [-(Math.sign(y - py)), Math.sign(x - px)];
+    const b = [-(Math.sign(ny - y)), Math.sign(nx - x)];
+    return [x + d * (a[0] + b[0]), y + d * (a[1] + b[1])];
+  });
+}
 /** A thin black reveal line across a front face at height y. */
 function reveal(K: Kit, w: number, y: number, zFront: number, x = 0) {
   K.box('black', w, 0.014, 0.012, x, y, zFront + 0.004);
@@ -740,47 +777,92 @@ function track(K: Kit) {
 }
 
 /**
- * DUV immersion scanner: white end modules (wafer handling from the track on the left, the
- * reticle library on the right) around a brushed-steel centre section with the projection
- * optics behind dark glazing, the illuminator housing raised on the roof, and the excimer laser
- * behind with its beam-delivery duct. Built as a hollow shell (one body, skins for the colour
- * breaks) so that when its front and top are cut away the detailed interior (Scanner.tsx)
- * stands in an open enclosure, with no inner floors or partitions across it.
+ * DUV immersion scanner (round four): a closed, panelled enclosure, as such machines are —
+ * nobody watches a scanner expose, so there is no glazing. Three modules in a row: wafer
+ * handling at the west end (lower, where the track's bridge docks), the main module over the
+ * stages, the lens and the reticle stage, and reticle handling at the east end, with the
+ * reticle pod port and the operator's panel; the illuminator's housing raised on the roof;
+ * the excimer laser behind, its beam-delivery duct climbing into the roof housing. The body
+ * is one hollow shell, so that opened (in front of the internal rear bulkhead and above the
+ * reveal the lower panels stop at: station z > −0.75, y > 1.03) the detailed interior
+ * (Scanner.tsx) stands in a shell with a wall thickness. The pod port and its pod, the panel
+ * and the emergency-off buttons stay whole.
  */
 function scanner(K: Kit) {
   const w = 5.4;
   const d = 3.2;
   const h = 2.9;
   const zf = d / 2;
-  const mw = w - 1.45; // main (steel) section width
-  const mx = 0.22;
-  const bx = 0.3; // beam delivery, on the lens axis
-  // plinth; one white body (the left module is lower), a brushed-steel skin on the centre section
-  K.box('gray', w - 0.06, 0.118, d - 0.06, 0, 0.059, 0);
-  K.box('white', w, 2.6 - 0.12, d, 0, 0.12 + (2.6 - 0.12) / 2, 0, 0.04);
-  K.box('white', w - 0.9, h - 2.6, d, 0.45, 2.6 + (h - 2.6) / 2, 0, 0.03);
-  K.box('clad', mw, h - 1.02, 0.012, mx, 1.02 + (h - 1.02) / 2, zf + 0.006);
-  K.box('clad', mw, 0.012, d, mx, h + 0.006, 0);
-  // raised illuminator housing on the roof; the beam-delivery entry module behind it
-  K.box('clad', 2.4, 0.44, d - 0.6, mx + 0.15, h + 0.21, -0.12, 0.05);
-  K.box('alu', 1.0, 0.28, 0.55, mx + 0.15, h + 0.57, -1.13, 0.04);
-  // front: dark glazing with slim mullions, reveals, a restrained violet status line
-  K.box('window', 2.9, 0.86, 0.014, mx - 0.1, 1.86, zf + 0.016, 0.006);
-  for (let i = 1; i < 4; i++) K.box('satin', 0.018, 0.86, 0.02, mx - 0.1 - 1.45 + i * 0.725, 1.86, zf + 0.024);
-  reveal(K, mw, 1.02, zf, mx);
-  reveal(K, mw, 2.46, zf + 0.012, mx);
-  K.box('violet', 1.2, 0.012, 0.01, mx + 0.75, 1.3, zf + 0.024);
-  for (let i = 0; i < 5; i++) K.box('satin', 0.012, h - 1.1, 0.012, mx - mw / 2 + 0.4 + i * 0.78, 1.02 + (h - 1.02) / 2, zf + 0.018);
-  for (let i = 0; i < 4; i++) K.box('warm', 0.86, 0.72, 0.012, mx - 1.3 + i * 0.95, 0.56, zf + 0.004, 0.006);
-  screenArm(K, w / 2 - 0.3, 1.45, zf);
-  // excimer laser unit behind, with the beam-delivery duct up and into the illuminator housing
-  body(K, 3.0, 1.9, 1.1, 0.6, -d / 2 - 1.05, 'warm');
-  K.box('window', 1.4, 0.26, 0.012, 0.2, 1.45, -d / 2 - 0.5 + 0.004, 0.004);
-  K.box('satin', 0.32, 1.26, 0.32, bx, 2.53, -d / 2 - 0.95, 0.04);
-  K.box('satin', 0.32, 0.32, 1.3, bx, 3.0, -d / 2 - 0.47, 0.04);
-  K.tower(w / 2 - 0.25, h, -d / 2 + 0.25);
+  const x0 = -w / 2;
+  const x1 = w / 2;
+  const xw = -1.8; // wafer handling | main module
+  const xr = 1.66; // main module | reticle handling
+  const hw = 2.6; // the wafer-handling module's roof
+  const band = 1.02; // top of the lower panels: the reveal the cutaway opens along
+  K.box('gray', w - 0.05, 0.1, d - 0.05, 0, 0.05, 0);
+  prism(K, 'white', [[x0, 0.1], [x1, 0.1], [x1, h], [xw, h], [xw, hw], [x0, hw]], -zf, zf, 0.03, true);
+  // the modules' joints, up the front and over the roof
+  for (const [x, top] of [
+    [xw, hw],
+    [xr, h],
+  ]) {
+    K.box('recess', 0.018, top - 0.12, 0.006, x, 0.1 + (top - 0.1) / 2, zf + 0.002);
+    K.box('recess', 0.018, 0.006, d, x, top + 0.002, 0);
+  }
+  // lower band: kick grilles, then removable panels up to the reveal
+  const mw = (xr - xw) / 3; // the main module's doors, in thirds
+  const lower: [number, number][] = [
+    [x0 + 0.02, xw - 0.01],
+    [xw + 0.01, xw + mw - 0.01],
+    [xw + mw + 0.01, xw + 2 * mw - 0.01],
+    [xw + 2 * mw + 0.01, xr - 0.01],
+  ];
+  for (const [a, b] of lower) {
+    grille(K, (a + b) / 2, b - a - 0.06, 0.19, zf, 3);
+    door(K, (a + b) / 2, b - a - 0.012, 0.3, band - 0.02, zf, 'gray', a < 0 ? 1 : -1);
+  }
+  grille(K, (xr + x1) / 2, x1 - xr - 0.08, 0.19, zf, 3);
+  reveal(K, w, band, zf);
+  // upper doors: one on the wafer module, three tall ones on the main module, and the reticle
+  // module's above its pod port
+  door(K, (x0 + xw) / 2, xw - x0 - 0.04, band + 0.03, hw - 0.14, zf, 'white', 1);
+  for (let i = 0; i < 3; i++) door(K, xw + mw * (i + 0.5), mw - 0.02, band + 0.03, h - 0.16, zf, 'white', i === 1 ? -1 : 1);
+  door(K, (xr + x1) / 2, x1 - xr - 0.04, 1.86, h - 0.16, zf, 'white', -1);
+  K.box('violet', xr - xw - 0.4, 0.008, 0.006, (xw + xr) / 2, h - 0.08, zf + 0.004);
+  K.keep(() => {
+    // reticle pod port: a recessed opening with its door, a shelf and a pod waiting on it
+    const px = (xr + x1) / 2 - 0.08;
+    K.box('recess', 0.42, 0.5, 0.02, px, 1.16, zf + 0.004, 0.006);
+    K.box('gray', 0.38, 0.3, 0.012, px, 1.24, zf + 0.012, 0.004);
+    K.box('dark', 0.16, 0.02, 0.01, px, 1.36, zf + 0.02, 0.003);
+    K.box('gray', 0.44, 0.05, 0.3, px, 0.95, zf + 0.15, 0.01);
+    K.box('foup', 0.26, 0.09, 0.26, px, 1.02, zf + 0.16, 0.02);
+    K.box('gray', 0.12, 0.02, 0.08, px, 1.075, zf + 0.16, 0.006);
+    screenArm(K, x1 - 0.3, 1.5, zf);
+    emo(K, xr + 0.12, 1.45, zf);
+    emo(K, (x0 + xw) / 2, 1.45, zf);
+  });
+  // roof: the illuminator's housing (behind it, the beam-delivery entry), cable trays and the
+  // exhaust behind the cut, the light tower at the back
+  K.box('gray', 2.36, 0.4, d - 0.6, 0.37, h + 0.2, -0.12, 0.04);
+  seams(K, 0.37 - 1.18, 0.37 + 1.18, h + 0.04, h + 0.36, zf - 0.3 - 0.12, 0.6);
+  K.box('alu', 1.0, 0.26, 0.55, 0.37, h + 0.53, -1.13, 0.04);
+  K.box('gray', 1.4, 0.08, 0.5, -1.05, h + 0.04, -1.2, 0.01);
+  K.cyl('satin', 0.11, 0.3, 1.9, h + 0.15, -1.2, 16);
+  K.cyl('steel', 0.13, 0.03, 1.9, h + 0.015, -1.2, 16);
+  K.box('gray', 0.7, 0.06, 0.4, x0 + 0.45, hw + 0.03, -1.2, 0.01);
+  K.tower(x1 - 0.25, h, -zf + 0.25);
+  // excimer laser behind: panels, a grille, its status display; the duct up into the roof
+  // housing at the beam-delivery height of the detailed scene (Scanner.tsx, BEAM_Y)
+  const lz = -zf - 1.05;
+  body(K, 3.0, 1.9, 1.1, 0.6, lz, 'warm');
+  for (let i = 0; i < 3; i++) door(K, -0.9 + 0.5 + i * 1.0, 0.96, 0.3, 1.78, lz + 0.55, 'warm', i === 2 ? -1 : 1);
+  grille(K, 0.6, 2.9, 0.19, lz + 0.55, 3);
+  K.box('screen', 0.3, 0.12, 0.008, 1.6, 1.62, lz + 0.575, 0.003);
+  K.box('satin', 0.32, 1.28, 0.32, 0.3, 2.54, -zf - 0.95, 0.04);
+  K.box('satin', 0.32, 0.32, 1.3, 0.3, 3.06, -zf - 0.47, 0.04);
   K.foot(w, d);
-  K.foot(3.0, 1.1, 0.6, -d / 2 - 1.05);
+  K.foot(3.0, 1.1, 0.6, lz);
 }
 
 /**
@@ -1355,8 +1437,15 @@ export const cutAmount = (id: SceneId) => cutT.get(id) ?? 0;
 /** Applies proxyHidden to the bay (registered by the mounted FabScene). */
 export const fabLod = { apply: () => {} };
 
-/** Seconds for a housing to open or close. */
-export const CUT_TIME = 0.8;
+/**
+ * Seconds for a housing to open or close, the parts inside it that open after it included
+ * (round four: a vacuum chamber's wall, cut once the housing around it is open; see innerCut).
+ */
+export const CUT_TIME = 1.3;
+/** Share of an opening the housing itself takes (0.8 s); the parts inside open in the rest. */
+export const HOUSING_SHARE = 0.62;
+/** How far the parts inside a housing that open after it are open (0 closed … 1 open). */
+export const innerCut = (id: SceneId) => Math.max(0, Math.min(1, (cutAmount(id) - HOUSING_SHARE) / (1 - HOUSING_SHARE)));
 
 /** A housing's opening after `dt` seconds more of wanting it open (1) or closed (0). */
 export function stepCut(t0: number, want: 0 | 1, dt: number): number {
@@ -1373,53 +1462,6 @@ export const cutClock: { dt: number | null; preset: Map<SceneId, number> | null 
 interface CutMats {
   planes: [THREE.Plane, THREE.Plane];
   byBase: Map<THREE.Material, THREE.Material>;
-}
-
-/** Colour of a cut face and of its hatching (display-referred sRGB, as the frame is drawn). */
-const SECTION_GLSL = SECTION_SRGB.map((h) => {
-  const c = new THREE.Color().setStyle(h, THREE.LinearSRGBColorSpace);
-  return `vec3(${c.r.toFixed(4)}, ${c.g.toFixed(4)}, ${c.b.toFixed(4)})`;
-}) as [string, string];
-
-/**
- * A housing's material as drawn opened: clipped, and two-sided so the inside shows through
- * the cut. Back faces are drawn a hair deeper than front faces (one pixel's depth slope, as a
- * polygon offset would): where one part rests on another (a roof unit on the housing top, the
- * housing on its plinth) the underside and the surface below lie in one plane, and without
- * the offset the two would z-fight wherever the cut lets the camera see them.
- */
-function cutMaterial(base: THREE.Material, planes: THREE.Plane[]): THREE.Material {
-  const cm = base.clone();
-  cm.side = THREE.DoubleSide;
-  cm.clippingPlanes = planes;
-  cm.clipIntersection = true;
-  cm.onBeforeCompile = (sh, r) => {
-    base.onBeforeCompile(sh, r);
-    sh.vertexShader = 'varying vec3 vCutW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n\tvCutW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader =
-      'varying vec3 vCutW;\n' +
-      sh.fragmentShader
-        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n\tgl_FragDepth = gl_FrontFacing ? gl_FragCoord.z : gl_FragCoord.z + fwidth(gl_FragCoord.z) + 2.5e-7;')
-        // Round four: where the cut passes through a wall, the eye sees the wall's inside
-        // (a back face): draw it as a section, flat and finely hatched, like the cut face of
-        // a technical cutaway drawing, so an opened housing reads as an illustration's cut
-        // and not as a machine missing its panels.
-        // (the hatching is anti-aliased, and fades out where its stripes would be finer than a
-        // few pixels: a distant cut is a flat section, never a moire)
-        .replace(
-          '#include <dithering_fragment>',
-          `#include <dithering_fragment>
-	if (!gl_FrontFacing) {
-		float u = (vCutW.x + vCutW.y + vCutW.z) * 18.0;
-		float fw = max(fwidth(u), 1e-4);
-		float line = 1.0 - smoothstep(0.12 - fw, 0.12 + fw, abs(fract(u) - 0.5));
-		line *= 1.0 - smoothstep(0.2, 0.45, fw);
-		gl_FragColor = vec4(mix(${SECTION_GLSL[0]}, ${SECTION_GLSL[1]}, line), 1.0);
-	}`,
-        );
-  };
-  cm.customProgramCacheKey = () => base.customProgramCacheKey() + ':cut';
-  return cm;
 }
 
 export interface FabPicking {
@@ -1571,7 +1613,8 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
       }
       // station-local planes → world: remove z > spec.z (toward the aisle) AND y > wipe height
       const top = stationBoxes.get(id as MachineId)?.max.y ?? 3;
-      const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      const th = Math.min(1, t / HOUSING_SHARE);
+      const e = th < 0.5 ? 2 * th * th : 1 - Math.pow(-2 * th + 2, 2) / 2;
       const yCut = top + 0.05 + (spec.y - top - 0.05) * e;
       stationMatrix(id as MachineId, cutTmp.m);
       c.planes[0].setFromNormalAndCoplanarPoint(cutTmp.n.set(0, 0, -1), cutTmp.p.set(0, 0, spec.z)).applyMatrix4(cutTmp.m);
