@@ -3,7 +3,10 @@
  * film time: the picture follows the sound, so if the audio stalls (buffering), the picture
  * waits with it, and muting changes nothing about timing. The silent camera moves between
  * segments, and the whole film when the narration cannot be played, run on the page clock
- * instead: one timeline, one time value, whichever source drives it.
+ * instead: one timeline, one time value, whichever source drives it. And the sound waits for
+ * the picture (round four): while the stage holds its picture for a machine that is still
+ * loading, the clock stands still and the narration pauses where it is (hold()), so it never
+ * describes what the viewer cannot see yet; it carries on from there once the machine is in.
  *
  * Two audio elements alternate, so the next segment is loaded while the current one plays.
  * Both are unlocked inside the click that started the film (browsers only allow sound after
@@ -53,6 +56,8 @@ export class FilmPlayer {
   muted = false;
   /** Seeks so far (the stage catches up with each one before it shows the new time). */
   seeks = 0;
+  /** The stage is holding its picture for a machine that is still loading (see hold()). */
+  stageHold = false;
   /** False when the narration cannot be played: captions only, on the page clock. */
   audioOk: boolean;
   audioError: string | null = null;
@@ -178,7 +183,7 @@ export class FilmPlayer {
    * buffering, the end).
    */
   now(): number {
-    if (!this.wantPlay || this.ended || this.buffering) return this.t;
+    if (!this.wantPlay || this.ended || this.buffering || this.stageHold) return this.t;
     const loc = locate(this.tl, this.t);
     if (loc.inGap || !this.audioOk) return Math.min(this.tl.duration, this.t + Math.max(0, (stageTime.now() - this.lastNow) / 1000) * this.rate);
     const el = this.els[this.active];
@@ -186,12 +191,28 @@ export class FilmPlayer {
     return loc.seg.start + Math.min(loc.seg.dur, el.ended ? loc.seg.dur : el.currentTime);
   }
 
+  /**
+   * Hold the clock (and pause the narration) while the stage waits for a machine to load, and
+   * carry on from the same moment when it no longer does.
+   */
+  hold(on: boolean): void {
+    if (on === this.stageHold) return;
+    this.stageHold = on;
+    if (on) {
+      for (const el of this.els) el.pause();
+    } else {
+      this.lastNow = stageTime.now();
+      if (this.wantPlay && !this.ended) this.syncAudio(true);
+    }
+    this.changed();
+  }
+
   /** Advance the clock; called every animation frame (and a few times a second when hidden). */
   tick(): void {
     const now = stageTime.now();
     const dt = Math.max(0, Math.min(0.25, (now - this.lastNow) / 1000));
     this.lastNow = now;
-    if (!this.wantPlay || this.ended) return;
+    if (!this.wantPlay || this.ended || this.stageHold) return;
     const loc = locate(this.tl, this.t);
     const seg = loc.seg;
     const el = this.audioOk && !loc.inGap ? this.syncAudio(false) : null;

@@ -28,7 +28,13 @@ export const filmBridge: {
   pres: object | null;
   /** The viewport aspect (width / height), kept up to date by the director. */
   aspect: number;
-} = { sample: null, sampleAt: null, stationAt: null, time: null, seeks: null, sync: null, station: null, otherEnd: null, soon: null, pres: null, aspect: 1.6 };
+  /**
+   * Round four: the picture is held for a machine that is still loading. The film's clock (and
+   * its narration) waits with it, so the sound never runs ahead of what the viewer can see;
+   * set by the director every frame while watching.
+   */
+  stageWaiting: boolean;
+} = { sample: null, sampleAt: null, stationAt: null, time: null, seeks: null, sync: null, station: null, otherEnd: null, soon: null, pres: null, aspect: 1.6, stageWaiting: false };
 
 /** The film's camera for the current media time; false when no film is loaded. */
 export function filmSample(out: CamSample): boolean {

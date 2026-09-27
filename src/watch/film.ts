@@ -5,6 +5,7 @@
  */
 import { create } from 'zustand';
 import narration from '../content/narration.json';
+import { filmBridge } from '../three/stage/filmBridge';
 import { stageTime, TEST_HOOKS, VIRTUAL_TIME } from '../three/stage/time';
 import { filmAudio, FilmPlayer, type FilmStatus } from './player';
 import { buildTimeline, cueAt, locate, type FilmManifest, type Timeline } from './timeline';
@@ -59,6 +60,8 @@ export function onFilmTick(fn: () => void): () => void {
 
 function tick() {
   if (!player) return;
+  // the sound waits for the picture while the stage waits for a machine (see FilmPlayer.hold)
+  player.hold(filmBridge.stageWaiting);
   player.tick();
   tickListeners.forEach((f) => f());
   publish();

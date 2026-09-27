@@ -680,7 +680,8 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
     // does a move whose other end is still loading (its path is planned once, with both machines
     // in place), and any seek until the stage shows the new time: its tree follows a frame late,
     // and the layers may be waiting for their geometry.
-    if (a.mode === 'watch' && s.mode === 'watch' && !s.first) {
+    if (!(a.mode === 'watch' && s.mode === 'watch' && !s.first)) filmBridge.stageWaiting = false;
+    else {
       const loading = (id: MachineId | null) => !!id && !readyStations.has(id) && !failedStations.has(id);
       // (after a seek, the machine of a move about to start is waited for as well, so that the
       // move plays through instead of stopping half-way for it)
@@ -691,6 +692,9 @@ export function Director({ deviceScene, controlsRef }: { deviceScene: THREE.Scen
         s.waitingFor = missing;
         s.waitSince = now;
       }
+      // the film's clock and narration wait while a machine it needs is loading (not for the
+      // frame or two a seek takes to show: see FilmPlayer.hold)
+      filmBridge.stageWaiting = !!missing;
       if (missing || s.seekHold) {
         s.holding = true;
         waiting = true;
