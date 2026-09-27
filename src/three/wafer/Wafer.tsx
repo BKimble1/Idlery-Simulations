@@ -15,25 +15,39 @@ import type { MatId } from '../../sim/materials';
 
 /**
  * A 300 mm wafer (radius 0.15 m) with a notch. The top face shows the simulated surface;
- * the edge is polished silicon. Thickness is exaggerated ×2 so it reads at tool scale.
+ * the edge is polished silicon, rounded over (round four: a real wafer's edge is ground to a
+ * rounded profile, which catches a line of light at close range). Thickness is exaggerated ×2
+ * so it reads at tool scale.
  */
 export function useWaferGeometry(radius = 0.15, thickness = 0.0016) {
   return useMemo(() => {
-    // Unit shape in [0,1]² so the cap UVs map straight onto the texture.
+    // Unit shape in [0,1]² so the cap UVs map straight onto the texture; the faces stop short
+    // of the rim by the edge's rounding, which takes the rim back out to the full radius.
+    const unit = 2 * radius;
+    const round = 0.4 / 1000 / unit;
     const shape = new THREE.Shape();
     const n = 160;
     const notch = 0.012; // half-width of the notch in unit coords
     for (let i = 0; i <= n; i++) {
       const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
       const da = Math.abs(((a + Math.PI / 2 + Math.PI) % (Math.PI * 2)) - Math.PI);
-      let r = 0.5;
-      if (da < notch / 0.5) r = 0.5 - (notch - da * 0.5) * 0.9;
+      let r = 0.5 - round;
+      if (da < notch / 0.5) r -= (notch - da * 0.5) * 0.9;
       const x = 0.5 + Math.cos(a) * r;
       const y = 0.5 + Math.sin(a) * r;
       if (i === 0) shape.moveTo(x, y);
       else shape.lineTo(x, y);
     }
-    const g = new THREE.ExtrudeGeometry(shape, { depth: thickness / (2 * radius), bevelEnabled: false, curveSegments: 4 });
+    const bt = Math.min(round, (thickness / unit) * 0.3);
+    const g = new THREE.ExtrudeGeometry(shape, {
+      depth: thickness / unit - 2 * bt,
+      bevelEnabled: true,
+      bevelThickness: bt,
+      bevelSize: round,
+      bevelSegments: 2,
+      curveSegments: 4,
+    });
+    g.translate(0, 0, bt);
     g.translate(-0.5, -0.5, 0);
     g.rotateX(-Math.PI / 2);
     g.scale(2 * radius, 2 * radius, 2 * radius);
