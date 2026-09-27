@@ -1,0 +1,10 @@
+{
+  "viewport": [1280, 800],
+  "dpr": 1,
+  "query": "quality=low",
+  "groups": [
+    { "name": "reticle", "path": "/?step=reticle", "points": [0.1, 0.4, 0.7] },
+    { "name": "expose", "path": "/?step=expose", "points": [0.4], "page": true },
+    { "name": "explore-scanner", "path": "/?explore=scanner" }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "viewport": [1280, 800],
+  "dpr": 1,
+  "query": "quality=low",
+  "groups": [
+    { "name": "reticle", "path": "/?step=reticle", "points": [0.4, 0.7] },
+    { "name": "align", "path": "/?step=align", "points": [0.5] },
+    { "name": "expose", "path": "/?step=expose", "points": [0.04, 0.4, 0.9], "page": true },
+    { "name": "expose-light", "path": "/?step=expose", "eval": "window.__fabStores.useApp.getState().toggle('lightPath')", "points": [0.4], "page": true },
+    { "name": "explore-scanner", "path": "/?explore=scanner" }
+  ]
+}

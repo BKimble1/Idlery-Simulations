@@ -9,10 +9,11 @@
 //         "setup": [ ...sequence.mjs steps... ], "frames": 300, "film": false,
 //         "out": "docs/recordings/develop-layers.mp4" }
 // With "film": true the recording starts at the film's current time and the narration of
-// that stretch is muxed in (needs tools/narration/.venv for ffmpeg and numpy).
+// that stretch is muxed in (needs imageio-ffmpeg and numpy: tools/narration/.venv, or the
+// system Python's).
 import { chromium } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 /** Screenshots of the canvas are read after its frame: keep the drawing buffer (?capture=1). */
@@ -22,7 +23,9 @@ const spec = JSON.parse(readFileSync(process.argv[2], 'utf8'));
 const tmp = join(tmpdir(), `fabrec-${spec.name}`);
 rmSync(tmp, { recursive: true, force: true });
 mkdirSync(tmp, { recursive: true });
-const FFMPEG = execFileSync('tools/narration/.venv/bin/python', ['-c', 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
+// the narration tools' Python (tools/narration/.venv) when it is set up, else the system's
+const PY = existsSync('tools/narration/.venv/bin/python') ? 'tools/narration/.venv/bin/python' : 'python3';
+const FFMPEG = execFileSync(PY, ['-c', 'import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())']).toString().trim();
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--enable-webgl'] });
 const ctx = await browser.newContext({
@@ -71,7 +74,7 @@ if (spec.film) {
   const segs = await page.evaluate(() => window.__fabFilm.filmPlayer().tl.segments.map((s) => ({ start: s.start, file: s.file })));
   const base = await page.evaluate(() => new URL(`narration/${window.__fabFilm.filmPlayer().tl.version}/`, location.origin + '/').pathname);
   writeFileSync(join(tmp, 'film.json'), JSON.stringify({ from: t0, dur: spec.frames / 30, segments: segs, dir: 'public' + base }));
-  execFileSync('tools/narration/.venv/bin/python', ['scripts/film_audio.py', join(tmp, 'film.json'), join(tmp, 'film.wav')], { stdio: 'inherit' });
+  execFileSync(PY, ['scripts/film_audio.py', join(tmp, 'film.json'), join(tmp, 'film.wav')], { stdio: 'inherit' });
   audioArgs = ['-i', join(tmp, 'film.wav'), '-c:a', 'aac', '-b:a', '96k', '-shortest'];
 }
 await browser.close();

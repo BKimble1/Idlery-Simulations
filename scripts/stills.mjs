@@ -6,10 +6,11 @@
 // spec: { "viewport": [1280, 800], "dpr": 1, "query": "quality=low", "touch": false,
 //         "groups": [ { "name": "coat", "path": "/?step=coat", "points": [0.1, 0.3] },
 //                     { "name": "explore-track", "path": "/?explore=track" },
-//                     { "name": "light", "path": "/?step=expose", "eval": "…", "points": [0.4] } ] }
+//                     { "name": "light", "path": "/?step=expose", "eval": "…", "points": [0.4] },
+//                     { "name": "inset", "path": "/?step=expose", "points": [0.4], "page": true } ] }
 // A group with points scrubs the lesson to each progress value (paused) and saves
 // <outDir>/<name>@<p>.png; a group without points saves <outDir>/<name>.png once the camera
-// has settled. Frames are rendered on the harness clock (?virt=1) and read back from the
+// has settled. With "page", each grab also saves <name>.page.png, a screenshot of the page. Frames are rendered on the harness clock (?virt=1) and read back from the
 // drawing buffer in the same task: continuity evidence, never frame-rate evidence.
 import { chromium } from '@playwright/test';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -65,7 +66,11 @@ for (const g of spec.groups) {
         cx.putImageData(img, 0, 0);
         return c.toDataURL('image/png');
       })
-      .then((d) => writeFileSync(`${outDir}/${name}.png`, Buffer.from(d.split(',')[1], 'base64')));
+      .then(async (d) => {
+        writeFileSync(`${outDir}/${name}.png`, Buffer.from(d.split(',')[1], 'base64'));
+        // with "page": the whole page too (the canvas with the interface over it: insets, labels)
+        if (g.page) await page.screenshot({ path: `${outDir}/${name}.page.png` });
+      });
   const settle = async (max = 400) => {
     for (let n = 0; n < max; n += 5) {
       await page.evaluate(() => window.__fabAdvance(5));
