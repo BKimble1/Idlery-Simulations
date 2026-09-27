@@ -12,6 +12,7 @@
  */
 import * as THREE from 'three';
 import type { MachineId } from '../../state/nav';
+import { TOOL_POSES } from '../poses';
 import { waferShown } from './anchors';
 import { copyPose, deviceToWorld, fovOf, headingChange, lerpPose, machinePose, makePose, resolve, turnAround, turnPose, worldToDevice, type CamPose, type CamSample } from './tracks';
 
@@ -237,14 +238,27 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
     // is not in it at the moment), then on to the new framing.
     const origin = o.from ?? o.to;
     const onWafer = makePose();
-    if (!origin || waferShown(origin)) resolve({ kind: 'wafer', framing: 'die' }, { station: origin }, onWafer);
+    const onDie = !origin || waferShown(origin);
+    if (onDie) resolve({ kind: 'wafer', framing: 'die' }, { station: origin }, onWafer);
     // (round four) back to a framing of the machine the layers belong to: fade straight into it
     // rather than out to the machine's establishing shot and in again
     else if (origin === o.to && probe.space === 'world') copyPose(onWafer, probe);
     else machinePose(origin, onWafer);
     o.fit(onWafer);
     legs.push({ dur: 1.1, eval: (u, out) => deviceToWorld(startPose, onWafer, u, origin, out) });
-    worldPath(onWafer);
+    if (onDie && origin && o.to && origin !== o.to && !TOOL_POSES[origin].leaveUp) {
+      // (round four) leaving for another machine from your die, inside this one: out the way the
+      // camera comes in to inspect the layers — to the machine's own framing, from which the die
+      // framing is taken — and travel from there. Backing out along the line of sight from the
+      // die went through the develop module's cover and the polisher's upper works, and stayed
+      // inside the furnace's tower (the whole course, walked move by move). A machine whose die
+      // has nothing above it but the opened housing leaves upward instead (`leaveUp`: the etch
+      // cluster's load lock), as from any other close view of the wafer (worldPath).
+      const home = resolve({ kind: 'shot', name: 'establish' }, { station: origin }, makePose());
+      o.fit(home);
+      legs.push(directLeg(onWafer, () => home));
+      worldPath(home);
+    } else worldPath(onWafer);
   } else {
     // Down to the wafer, pick out your die, then reveal the cross-section. If the wafer is not
     // in this machine at the moment (it is in another tool for this part of the step), the

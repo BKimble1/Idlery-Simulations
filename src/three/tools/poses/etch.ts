@@ -15,6 +15,9 @@ export const POSE: ToolPose = {
   mount: { yaw: 0, offset: [0.912, -0.16] },
   // Everything in front of the gas cabinet opens above the chamber floors.
   cutaway: { z: -1.41, y: 0.76 },
+  // your die in the load lock (after the trench etch): up and out over the cut-down EFEM; the
+  // straight way to the framing crosses the load lock's lid
+  leaveUp: true,
   variants: {
     ash: { pos: [-3.02, 2.77, 2.55], target: [-1.37, 1.02, 0.26] },
   },

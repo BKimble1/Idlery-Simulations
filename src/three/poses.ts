@@ -39,6 +39,13 @@ export type ToolPose = Pose & {
    * it, the low-detail model is simply replaced by the detailed one.
    */
   cutaway?: { z: number; y: number };
+  /**
+   * Round four: leaving for another machine from the learner's die inside this one, the camera
+   * backs out upward along its line of sight instead of going to the machine's own framing
+   * (see flights.ts, the retrace out of the layers). For a die with nothing above it but the
+   * opened housing, where the straight way to the framing crosses a part.
+   */
+  leaveUp?: boolean;
 };
 
 export const WAFER_POSE: Pose = { pos: [0, 0.5, 0.4], target: [0, -0.02, 0.0], min: 0.15, max: 1.4 };

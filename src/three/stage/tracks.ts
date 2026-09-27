@@ -325,12 +325,15 @@ const vb = new THREE.Vector3();
 
 /**
  * Which way (±1, about the vertical) a move from `a` to `b` turns the camera around, or 0 if it
- * does not: its horizontal view turns by more than 90°.
+ * does not: its horizontal view turns by more than 90°. (A view within 30° of straight down has
+ * no heading worth turning: 0.)
  */
 export function turnAround(a: CamPose, b: CamPose): -1 | 0 | 1 {
-  va.subVectors(a.target, a.pos).setY(0);
-  vb.subVectors(b.target, b.pos).setY(0);
-  if (va.lengthSq() < 1e-8 || vb.lengthSq() < 1e-8 || va.dot(vb) >= 0) return 0;
+  const ha = va.subVectors(a.target, a.pos).length();
+  const hb = vb.subVectors(b.target, b.pos).length();
+  va.setY(0);
+  vb.setY(0);
+  if (va.length() < 0.5 * ha || vb.length() < 0.5 * hb || va.dot(vb) >= 0) return 0;
   return va.x * vb.z - va.z * vb.x > 0 ? -1 : 1;
 }
 
