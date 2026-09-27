@@ -45,9 +45,17 @@ function reclip() {
 }
 
 /** Draw the queued models into the prewarm light's shadow map (from the world scene's onAfterRender). */
+const clearColor = new THREE.Color();
+
 export function runShadowPrewarm(gl: THREE.WebGLRenderer, camera: THREE.Camera) {
   if (!queue.length || !gl.shadowMap.enabled) return;
   const needsUpdate = gl.shadowMap.needsUpdate;
+  // (the shadow pass sets its own clear colour and scissor state and leaves them: inside a
+  // render the main pass sets them again, but this runs after it, and a later pass of the same
+  // frame — a cross-fade's other picture, a copy — would clear to white)
+  gl.getClearColor(clearColor);
+  const clearAlpha = gl.getClearAlpha();
+  const scissor = gl.getScissorTest();
   for (const o of queue.splice(0)) {
     o.updateMatrixWorld(true);
     box.setFromObject(o);
@@ -78,4 +86,6 @@ export function runShadowPrewarm(gl: THREE.WebGLRenderer, camera: THREE.Camera) 
     o.visible = shown;
   }
   gl.shadowMap.needsUpdate = needsUpdate;
+  gl.setClearColor(clearColor, clearAlpha);
+  gl.setScissorTest(scissor);
 }

@@ -8,6 +8,12 @@
     { "name": "phone-coat", "path": "/?step=coat", "points": [0.3] },
     { "name": "phone-expose", "path": "/?step=expose", "points": [0.4] },
     { "name": "phone-gate-etch", "path": "/?step=gate-etch", "points": [0.3] },
-    { "name": "phone-explore-scanner", "path": "/?explore=scanner" }
+    { "name": "phone-explore-scanner", "path": "/?explore=scanner" },
+    { "name": "phone-explore-track", "path": "/?explore=track" },
+    { "name": "phone-explore-cmp", "path": "/?explore=cmp" },
+    { "name": "phone-explore-etch", "path": "/?explore=etch" },
+    { "name": "phone-sti-fill", "path": "/?step=sti-fill", "points": [0.1] },
+    { "name": "phone-probe", "path": "/?step=probe", "points": [0.5] },
+    { "name": "phone-softbake", "path": "/?step=softbake", "points": [0.5] }
   ]
 }

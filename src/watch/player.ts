@@ -193,16 +193,21 @@ export class FilmPlayer {
 
   /**
    * Hold the clock (and pause the narration) while the stage waits for a machine to load, and
-   * carry on from the same moment when it no longer does.
+   * carry on from the same moment when it no longer does. Play and seeks made during a hold
+   * start the narration only when it ends (syncAudio); a background tab ends it (startTimer).
+   * The stage's verdict comes a frame or two after a seek: until then a seek into a machine that
+   * is still loading plays, and the hold starts from wherever the film has got to.
    */
   hold(on: boolean): void {
     if (on === this.stageHold) return;
     this.stageHold = on;
     if (on) {
       for (const el of this.els) el.pause();
-    } else {
-      this.lastNow = stageTime.now();
-      if (this.wantPlay && !this.ended) this.syncAudio(true);
+    } else if (this.wantPlay && !this.ended) {
+      // (the clock's reference needs no reset: tick() keeps it at the last frame while held,
+      // and play() sets it. Reset here, a hold still set from a seek made while paused cost the
+      // first frame after Play its time: the film lagged a frame behind the sought time)
+      this.syncAudio(true);
     }
     this.changed();
   }
@@ -292,7 +297,9 @@ export class FilmPlayer {
       el.playbackRate = this.rate;
       el.volume = this.volume;
       el.muted = this.muted;
-      if (this.wantPlay) el.play().catch((e: unknown) => this.blocked(e));
+      // (never while the film waits for the stage: Play or a seek during a hold starts the
+      // narration only when the hold ends — see hold)
+      if (this.wantPlay && !this.stageHold) el.play().catch((e: unknown) => this.blocked(e));
       else el.pause();
     }
     return el;
@@ -337,9 +344,14 @@ export class FilmPlayer {
 
   private startTimer(): void {
     if (this.timer !== null || typeof window === 'undefined') return;
-    // A background tab gets no animation frames; keep the clock (and segment hand-over) going.
+    // A background tab gets no animation frames; keep the clock (and segment hand-over) going,
+    // and the narration with it: with no picture on screen there is nothing for the sound to
+    // wait for, so a hold for the stage ends here (the stage holds it again on return, if the
+    // machine it needs is still loading then)
     this.timer = window.setInterval(() => {
-      if (document.hidden) this.tick();
+      if (!document.hidden) return;
+      this.hold(false);
+      this.tick();
     }, 250);
   }
 

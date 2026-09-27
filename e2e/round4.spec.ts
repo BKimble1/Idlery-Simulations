@@ -367,6 +367,108 @@ test('Watch: the narration waits for a machine that is still loading, and carrie
   expect(errors.filter((e) => !/Track-|dynamically imported module|net::ERR_FAILED/i.test(e))).toEqual([]);
 });
 
+type RealW = {
+  __fabFilm: {
+    filmPlayer: () => { now: () => number; stageHold: boolean; els: HTMLAudioElement[]; tl: { segments: { start: number; station: string | null }[] } } | null;
+    filmControls: { seek: (t: number) => void; play: () => void; pause: () => void };
+    useFilm: { getState: () => { status: string } };
+  };
+  __fab: { useStageInfo: { getState: () => { loading: string | null } } };
+};
+
+test('Watch, with its narration (real time): Play or a seek during a hold does not start the narration; a background tab plays it on', async ({ page }, info) => {
+  onlyDesktop(info.project.name);
+  test.setTimeout(600_000);
+  const errors = watchErrors(page);
+  await page.goto('/');
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  let release = () => {};
+  const released = new Promise<void>((r) => (release = r));
+  await page.route(TRACK_MODULE, async (r) => {
+    await released;
+    await r.continue();
+  });
+  await page.goto('/?hooks=1');
+  await page.getByRole('button', { name: 'Watch the film' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as RealW).__fabFilm.useFilm.getState().status), { timeout: 60_000 }).toBe('playing');
+  const state = () =>
+    page.evaluate(() => {
+      const w = window as unknown as RealW;
+      const p = w.__fabFilm.filmPlayer()!;
+      return { held: p.stageHold, t: p.now(), sounding: p.els.some((e) => !e.paused), loading: w.__fab.useStageInfo.getState().loading };
+    });
+  /** Read the state every 100 ms for a second (real time is the scenario): all of it held and silent. */
+  const staysHeld = async (what: string) => {
+    const reads: Awaited<ReturnType<typeof state>>[] = [];
+    for (let i = 0; i < 10; i++) {
+      reads.push(await state());
+      await page.waitForTimeout(100);
+    }
+    for (const r of reads) {
+      expect(r.held, `${what}: the film is held`).toBe(true);
+      expect(r.sounding, `${what}: no narration while the picture waits`).toBe(false);
+    }
+    const ts = reads.map((r) => r.t);
+    expect(Math.max(...ts) - Math.min(...ts), `${what}: the clock stands still`).toBeLessThan(0.01);
+  };
+  // into the track's first lesson, while the track's module is held at the network
+  const into = await page.evaluate(() => {
+    const w = window as unknown as RealW;
+    const s = w.__fabFilm.filmPlayer()!.tl.segments.find((s) => s.station === 'track')!;
+    w.__fabFilm.filmControls.seek(s.start + 1);
+    return s.start + 1;
+  });
+  await expect.poll(async () => (await state()).held, { timeout: 60_000 }).toBe(true);
+  await staysHeld('the stage waits for the track');
+  // Play (after a pause) during the hold: before round four's fix, this started the narration
+  // under the held picture (and the hold's end played that stretch again)
+  await page.evaluate(() => {
+    const c = (window as unknown as RealW).__fabFilm.filmControls;
+    c.pause();
+    c.play();
+  });
+  await staysHeld('Play during the hold');
+  // a seek during the hold, to another moment of the same lesson
+  await page.evaluate((t) => (window as unknown as RealW).__fabFilm.filmControls.seek(t), into + 0.5);
+  await staysHeld('a seek during the hold');
+  expect((await state()).t).toBeCloseTo(into + 0.5, 2);
+  // In a background tab (emulated: no animation frames, document hidden) there is no picture to
+  // wait for: the narration plays on, and the clock with it.
+  const away = await page.evaluate(async () => {
+    const p = (window as unknown as RealW).__fabFilm.filmPlayer()!;
+    const raf = window.requestAnimationFrame;
+    const held: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = (cb) => (held.push(cb), 0);
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    const a = p.now();
+    await new Promise((r) => setTimeout(r, 2000));
+    const out = { advanced: p.now() - a, sounding: p.els.some((e) => !e.paused), held: p.stageHold };
+    delete (document as unknown as { hidden?: boolean }).hidden;
+    delete (document as unknown as { visibilityState?: string }).visibilityState;
+    window.requestAnimationFrame = raf;
+    document.dispatchEvent(new Event('visibilitychange'));
+    for (const cb of held) raf(cb);
+    return out;
+  });
+  expect(away.held, 'no hold in a background tab').toBe(false);
+  expect(away.sounding, 'the narration plays on in a background tab').toBe(true);
+  expect(away.advanced, 'and the clock follows it').toBeGreaterThan(1);
+  // back on the page, the picture still waits for the track, and the film with it
+  await expect.poll(async () => (await state()).held, { timeout: 60_000 }).toBe(true);
+  await staysHeld('back from the background, still waiting for the track');
+  // the track arrives: the narration starts again and the clock runs
+  release();
+  await expect.poll(async () => { const s = await state(); return !s.held && s.sounding && s.loading === null; }, { timeout: 180_000 }).toBe(true);
+  const r0 = (await state()).t;
+  await expect.poll(async () => (await state()).t - r0, { timeout: 30_000 }).toBeGreaterThan(0.5);
+  expect(errors.filter((e) => !/Track-|dynamically imported module|net::ERR_FAILED/i.test(e))).toEqual([]);
+});
+
 test('no shader program is compiled in the middle of a move: arriving at the etch cluster, housing and chamber opening', async ({ page }, info) => {
   onlyDesktop(info.project.name);
   test.setTimeout(900_000);

@@ -17,13 +17,40 @@ const film = (page: Page) =>
     return { status: f.status, t: p?.now() ?? 0, cue: f.cue, audioOk: f.audioOk, seg: f.seg };
   });
 
-/** The time the picture is drawn at, against the audio element's own position, over n samples 100 ms apart. */
-const drift = (page: Page, n: number) =>
-  page.evaluate(async (n) => {
+type LiveWin = {
+  __fab: { stageFocus: { station: string | null }; readyStations: Set<string>; useStageInfo: { getState: () => { flying: boolean } } };
+  __fabFilm: { filmPlayer: () => { stageHold: boolean } | null; useFilm: { getState: () => { status: string } } };
+};
+
+/**
+ * Round four: after a seek, or on coming back from the background, the film's clock and
+ * narration wait while the stage prepares the machine they need (FilmPlayer.hold). Resolves once
+ * the picture is live at a loaded machine and the film is not held: from then on it runs.
+ */
+const untilRunning = (page: Page) =>
+  expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const w = window as unknown as LiveWin;
+          const p = w.__fabFilm.filmPlayer();
+          const st = w.__fab.stageFocus.station;
+          return !!p && !p.stageHold && w.__fabFilm.useFilm.getState().status === 'playing' && !!st && w.__fab.readyStations.has(st) && !w.__fab.useStageInfo.getState().flying;
+        }),
+      { timeout: 120_000 },
+    )
+    .toBe(true);
+
+/**
+ * The time the picture is drawn at, against the audio element's own position, over n samples
+ * 100 ms apart (or until `enough` of them found the narration playing).
+ */
+const drift = (page: Page, n: number, enough = Infinity) =>
+  page.evaluate(async ([n, enough]) => {
     const w = window as unknown as FilmWin;
     let worst = 0;
     let samples = 0;
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < n && samples < enough; i++) {
       await new Promise((r) => setTimeout(r, 100));
       const p = w.__fabFilm.filmPlayer()! as unknown as { now: () => number; els: HTMLAudioElement[]; active: number; tl: { segments: { start: number; dur: number }[] } };
       const audio = p.els[p.active];
@@ -35,7 +62,7 @@ const drift = (page: Page, n: number) =>
       samples++;
     }
     return { worst, samples };
-  }, n);
+  }, [n, enough] as const);
 
 test('the film plays through to the working inverter without touching the learning run', async ({ page }) => {
   const errors = watchErrors(page);
@@ -95,6 +122,7 @@ test('narration drives the film clock: pause, seek, speed, mute and chapters sta
     c.play();
   });
   await expect.poll(async () => (await film(page)).status, { timeout: 30_000 }).toBe('playing');
+  await untilRunning(page);
   const a = (await film(page)).t;
   await page.waitForTimeout(2000);
   const b = (await film(page)).t;
@@ -129,7 +157,11 @@ test('narration drives the film clock: pause, seek, speed, mute and chapters sta
     return b - a;
   });
   expect(away).toBeGreaterThan(2); // 2 s away at 1.5×
-  const d1 = await drift(page, 20);
+  await untilRunning(page);
+  // (on this round's software-rendered frames the film can reach the end of its segment, and a
+  // silent move to the next machine, before 20 samples are taken: sampled until 10 found the
+  // narration playing, which it does again after the move)
+  const d1 = await drift(page, 400, 10);
   console.log(`after returning from the background: worst difference ${(d1.worst * 1000).toFixed(1)} ms over ${d1.samples} samples`);
   expect(d1.samples).toBeGreaterThan(5);
   expect(d1.worst).toBeLessThan(0.15);

@@ -75,8 +75,9 @@ async function toggleAfter(page: Page, first: string, at: number, second: string
 test('reversing the cross-section fade at any point never jumps; the latest request wins', async ({ page }, info) => {
   onlyDesktop(info.project.name);
   // six reversals and a burst, frame by frame: 14–15 minutes on a software renderer (the probe's
-  // copy of this case took 819–868 s on round two's build and this round's)
-  test.setTimeout(1_500_000);
+  // copy of this case took 819–868 s on round two's build and round three's); round four's lit,
+  // reflective equipment about doubles the cost of a frame there, and it ran past 25 minutes
+  test.setTimeout(2_700_000);
   const errors = watchErrors(page);
   await freshStart(page, '/?step=gate-etch&p=0.5&virt=1');
   await settle(page);
