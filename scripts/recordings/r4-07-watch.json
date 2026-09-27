@@ -1,0 +1,5 @@
+{ "name": "r4-07-watch", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?watch&virt=1", "film": true,
+  "setup": [ {"wait": 3000}, {"advance": 20},
+             {"eval": "(() => { const p = window.__fabFilm.filmPlayer(); const s = p.tl.segments.find((x) => x.def.id === 'expose'); window.__fabFilm.filmControls.seek(s.start + 2); window.__fabFilm.filmControls.play(); })()"},
+             {"advance": 45} ],
+  "frames": 360, "out": "docs/recordings/round4/r4-07-watch-after-a-seek.mp4" }

@@ -1,0 +1,4 @@
+{ "name": "r4-03-etch", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?step=adi&virt=1",
+  "setup": [ {"wait": 3000}, {"advance": 150}, {"eval": "const c = window.__fabStores.useClock.getState(); c.set(0.96); c.play()"}, {"advance": 2} ],
+  "during": [ {"frame": 15, "eval": "window.__fabStores.useApp.getState().next()"} ],
+  "frames": 450, "out": "docs/recordings/round4/r4-03-arrive-at-etch-open-and-etch.mp4" }

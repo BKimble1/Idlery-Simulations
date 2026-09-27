@@ -28,11 +28,13 @@ const grab = (name) => page.evaluate(() => {
 }).then((d) => writeFileSync(`${outDir}/${name}.png`, Buffer.from(d.split(',')[1], 'base64')));
 const settle = async () => { for (let i = 0; i < 80; i++) { await page.evaluate(() => window.__fabAdvance(5)); const s = await page.evaluate(() => { const i = window.__fab.useStageInfo.getState(); return !i.flying && i.shown; }); if (s) return; } };
 await settle();
-// spec items: "p=0.05" (scrub and grab), "next", "prev", "adv=N", "grab=name"
+// spec items: "p=0.05" (scrub and grab), "next", "prev", "adv=N", "grab=name", "ov=device"
 let k = 0;
 for (const s of spec) {
   if (s === 'next' || s === 'prev') { await page.evaluate((m) => window.__fabStores.useApp.getState()[m](), s); continue; }
   if (s === 'settle') { await settle(); continue; }
+  // "ov=device" / "ov=null": the learner's scale override (Inspect layers, Back to equipment)
+  if (s.startsWith('ov=')) { await page.evaluate((v) => window.__fabStores.useApp.getState().setScaleOverride(v === 'null' ? null : v), s.slice(3)); continue; }
   if (s.startsWith('adv=')) { await page.evaluate((n) => window.__fabAdvance(n), Number(s.slice(4))); continue; }
   if (s.startsWith('p=')) { const p = Number(s.slice(2)); await page.evaluate((p) => { const c = window.__fabStores.useClock.getState(); c.set(p); c.pause(); }, p); await page.evaluate(() => window.__fabAdvance(2)); await grab(String(k++).padStart(2, '0') + '_p' + p); continue; }
   if (s.startsWith('grab=')) { await grab(String(k++).padStart(2, '0') + '_' + s.slice(5)); continue; }

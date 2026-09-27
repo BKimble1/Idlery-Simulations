@@ -1,0 +1,8 @@
+{ "name": "r4-05-explore", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?step=coat&virt=1",
+  "setup": [ {"wait": 3000}, {"advance": 150}, {"eval": "window.__fabStores.useClock.getState().pause()"}, {"advance": 2} ],
+  "during": [
+    {"frame": 15, "eval": "window.__fabStores.useApp.getState().navigate({mode:'explore'})"},
+    {"frame": 130, "eval": "window.__fabStores.useApp.getState().navigate({mode:'explore', machine:'scanner'})"},
+    {"frame": 250, "eval": "window.__fabStores.useApp.getState().navigate({mode:'explore', machine:'scanner', demo:true})"}
+  ],
+  "frames": 480, "out": "docs/recordings/round4/r4-05-bay-to-scanner-closed-then-opened.mp4" }

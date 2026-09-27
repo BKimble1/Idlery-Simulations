@@ -1,0 +1,3 @@
+{ "name": "r4-02-scanner", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?step=expose&virt=1",
+  "setup": [ {"wait": 3000}, {"advance": 150}, {"eval": "const c = window.__fabStores.useClock.getState(); c.set(0.02); c.play()"}, {"advance": 2} ],
+  "frames": 300, "out": "docs/recordings/round4/r4-02-scanner-exposure-with-inset.mp4" }

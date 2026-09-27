@@ -1,0 +1,3 @@
+{ "name": "r4-04-cmp", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?step=contact-fill&virt=1",
+  "setup": [ {"wait": 3000}, {"advance": 150}, {"eval": "const c = window.__fabStores.useClock.getState(); c.set(0.52); c.play()"}, {"advance": 2} ],
+  "frames": 240, "out": "docs/recordings/round4/r4-04-polisher-wet-pad.mp4" }

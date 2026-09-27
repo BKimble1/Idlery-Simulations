@@ -1,0 +1,4 @@
+{ "name": "r4-01-track", "w": 960, "h": 540, "url": "http://127.0.0.1:4173/?step=prime&virt=1",
+  "setup": [ {"wait": 3000}, {"advance": 150}, {"eval": "const c = window.__fabStores.useClock.getState(); c.set(0.85); c.play()"}, {"advance": 2} ],
+  "during": [ {"frame": 40, "eval": "window.__fabStores.useApp.getState().next()"} ],
+  "frames": 360, "out": "docs/recordings/round4/r4-01-track-prime-to-coat.mp4" }
