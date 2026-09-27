@@ -229,6 +229,9 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
     const origin = o.from ?? o.to;
     const onWafer = makePose();
     if (!origin || waferShown(origin)) resolve({ kind: 'wafer', framing: 'die' }, { station: origin }, onWafer);
+    // (round four) back to a framing of the machine the layers belong to: fade straight into it
+    // rather than out to the machine's establishing shot and in again
+    else if (origin === o.to && probe.space === 'world') copyPose(onWafer, probe);
     else machinePose(origin, onWafer);
     o.fit(onWafer);
     legs.push({ dur: 1.1, eval: (u, out) => deviceToWorld(startPose, onWafer, u, origin, out) });
@@ -239,6 +242,9 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
     // cross-section is revealed from the machine itself rather than from an empty holder.
     const anchor = makePose();
     if (!o.to || waferShown(o.to)) resolve({ kind: 'wafer', framing: 'die' }, { station: o.to }, anchor);
+    // (round four) already at the machine: reveal the layers from where the camera is, instead of
+    // flying out to the machine's establishing shot (through the aisle, past a blank wall)
+    else if (o.from === o.to) copyPose(anchor, startPose);
     else machinePose(o.to, anchor);
     o.fit(anchor);
     const from = worldPath(startPose);
