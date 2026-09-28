@@ -413,7 +413,8 @@ The director owns the camera and the render loop in every mode:
   lesson finds the die where it was. The key light and shadows follow the
   story to the next machine at the wafer hand-over, while the camera is between machines.
 * **Clocks** (`stage/time.ts`): flights, the lesson clock and the demonstration clock run on
-  the stage clock, which stops while the page is hidden, and lesson progress is measured
+  the stage clock, which stops while the page is hidden (and, *round four*, while a dialog
+  covers the stage: see below), and lesson progress is measured
   from when playback (re)started rather than accumulated from frame deltas, so a slow frame
   never slows a lesson and a hidden tab resumes where it was. Decorative motion (fans,
   flicker, the overhead vehicles, the signal glow) reads one decorative time: the stage
@@ -421,6 +422,18 @@ The director owns the camera and the render loop in every mode:
   it stops under reduced motion. The harness clock (`?virt=1`) passes seconds to three.js'
   clock (round two passed milliseconds, which made decorative motion 1000× too fast in
   recordings).
+* **Dialogs over the stage** *(round four)* (`Stage.tsx` `useStageCovered`, `CoverStop`;
+  `stage/time.ts` `setStageCovered`, `whenUncovered`): while Chapters, Look closer, the
+  equipment list or any other dialog is open in a lesson or the explorer, the stage draws
+  nothing (the canvas's loop stops, and so do the frames the camera controls had already asked
+  for), the stage clock stops, and preparing machines for the GPU (compiling their programs,
+  uploading their textures) waits until it closes — so every frame the browser can make goes
+  to the dialog, and the lesson, a move or a demonstration carries on from where it was. On the
+  software renderer a frame of a lesson ties up the GPU process for seconds, and the Chapters
+  drawer, which faded in from transparent, stayed invisible that long (a second click, on its
+  invisible backdrop, closed it again): dialogs and cards now slide in fully opaque
+  (`styles/app.css`). A resize meanwhile clears the canvas, so the stage is drawn once more,
+  as it stands. Watch plays on under its own dialogs (its narration keeps its own clock).
 * **Free look**: dragging, pinching or scrolling hands the camera to the learner (Learn and
   Explore); *Guided view* / *Reset view* flies back. Explore keeps the camera inside the
   building (camera-controls boundary).

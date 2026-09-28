@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
-import { advance, freshStart, overlaps, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
+import { machineOfStep } from '../src/content/machines';
+import { STEPS } from '../src/content/steps';
+import { CHAPTERS, chapterSteps, FLOW } from '../src/sim/flow';
+import { advance, freshStart, overlaps, press, runState, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
 
 /**
  * Round four: machines are seen closed first and opened deliberately (the housing as the camera
@@ -533,6 +536,96 @@ test('the last lesson loads in a fresh browser without the page freezing', async
     expect(r.answered, `fresh load ${i + 1}: the page answers`).toBe(true);
     expect(r.shown, `fresh load ${i + 1}: the lesson is shown`).toBe(true);
   }
+});
+
+type CoverW = {
+  __fab: { readyStations: Set<string>; gl: { info: { render: { frame: number } } }; stageTime: { clock: () => number } };
+  __fabStores: { useClock: { getState: () => { progress: number } } };
+  __atKey?: Record<string, { frame: number; clock: number; now: number }>;
+};
+
+test('Chapters opens at once over a busy stage, and the lesson waits behind it (real time)', async ({ page }, info) => {
+  onlyDesktop(info.project.name);
+  test.setTimeout(420_000);
+  const errors = watchErrors(page);
+  await freshStart(page, '/?step=coat&hooks=1');
+  const state = () =>
+    page.evaluate(() => {
+      const w = window as unknown as CoverW;
+      return { frames: w.__fab.gl.info.render.frame, p: w.__fabStores.useClock.getState().progress };
+    });
+  // the coat lesson plays on the stage
+  await expect.poll(() => page.evaluate(() => (window as unknown as CoverW).__fab?.readyStations?.has('track') ?? false), { timeout: 240_000 }).toBe(true);
+  await expect.poll(async () => (await state()).p, { timeout: 120_000 }).toBeGreaterThan(0.02);
+  // (the stage's frame count and clock as a key is handled: in the same task as the app's handler)
+  await page.evaluate(() => {
+    const w = window as unknown as CoverW;
+    w.__atKey = {};
+    window.addEventListener(
+      'keydown',
+      (e) => (w.__atKey![e.key] = { frame: w.__fab.gl.info.render.frame, clock: w.__fab.stageTime.clock(), now: performance.now() }),
+      { capture: true },
+    );
+  });
+  const atKey = (k: string) => page.evaluate((key) => (window as unknown as CoverW).__atKey![key], k);
+  await page.locator('h1.step-title').focus();
+  await page.keyboard.press('c');
+  const drawer = page.getByRole('dialog', { name: 'Chapters' });
+  await expect(drawer).toBeVisible();
+  // painted, not merely in the page: fully opaque (no fade from transparent), and the browser
+  // draws a picture of it (before round four's fix the drawer sat at the first, transparent
+  // frame of its slide-in for as long as the stage kept this software renderer busy)
+  expect(await drawer.evaluate((d) => Number(getComputedStyle(d).opacity))).toBe(1);
+  await page.screenshot({ clip: (await drawer.boundingBox())!, timeout: 30_000 });
+  // not one more frame of the stage under it, and the lesson waits (real time is the scenario)
+  const open = await state();
+  expect(open.frames, 'no frame of the stage once the drawer is open').toBe((await atKey('c')).frame);
+  await page.waitForTimeout(2000);
+  const later = await state();
+  expect(later.frames, 'no frame of the stage under the drawer').toBe(open.frames);
+  expect(later.p, 'the lesson waits').toBe(open.p);
+  // a resize under it (a phone turned with the drawer open) clears the canvas: the stage is
+  // drawn once more, as it stood when the drawer opened, and waits again
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await expect.poll(async () => (await state()).frames, { timeout: 60_000 }).toBe(later.frames + 1);
+  const resized = await state();
+  await page.waitForTimeout(2000);
+  expect(await state(), 'drawn once, and the lesson waits').toEqual(resized);
+  // closed, the lesson carries on from where it was: the stage clock did not count the time
+  // the drawer was open
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const [c, esc] = [await atKey('c'), await atKey('Escape')];
+  expect(esc.now - c.now, 'the drawer was open a while').toBeGreaterThan(2000);
+  expect(esc.clock - c.clock, 'the stage clock waited meanwhile').toBeLessThan(250);
+  await expect.poll(async () => (await state()).frames, { timeout: 60_000 }).toBeGreaterThan(resized.frames);
+  await expect.poll(async () => (await state()).p, { timeout: 120_000 }).toBeGreaterThan(later.p);
+  expect(errors).toEqual([]);
+});
+
+test('every chapter opens from the Chapters drawer: its first lesson, at its machine', async ({ page, hasTouch }, info) => {
+  test.skip(info.project.name === 'tablet', "desktop and phone cover the drawer's two layouts");
+  test.setTimeout(1_200_000); // five flights, frame-stepped on software rendering
+  const errors = watchErrors(page);
+  await freshStart(page, '/?step=arrive&virt=1');
+  await settle(page);
+  // (the first chapter last: its first lesson is where this starts)
+  for (const c of [...CHAPTERS.slice(1), CHAPTERS[0]]) {
+    const i = chapterSteps(c.id)[0];
+    await press(page.getByRole('button', { name: 'Chapters' }), hasTouch);
+    const drawer = page.getByRole('dialog', { name: 'Chapters' });
+    await expect(drawer).toBeVisible();
+    await press(drawer.getByRole('button', { name: new RegExp(`^Step ${i + 1}: `) }), hasTouch);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('h1.step-title'), c.title).toHaveText(STEPS[FLOW[i].id].title);
+    await settle(page, 900);
+    const s = await stageInfo(page);
+    expect(s.flying, c.title).toBe(false);
+    const machine = machineOfStep(i);
+    if (machine) expect(s.focus, c.title).toBe(machine);
+    expect((await runState(page)).step, c.title).toBe(i);
+  }
+  expect(errors).toEqual([]);
 });
 
 test('reduced motion: a machine and its chamber open at once, without a moving cut', async ({ page }, info) => {

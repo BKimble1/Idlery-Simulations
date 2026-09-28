@@ -40,7 +40,7 @@ import { applyStationLights, STATION_LIGHT_POOL } from './stage/StationLight';
 import { stageFocus, useStageInfo } from './stage/info';
 import { useExplore } from './stage/explore';
 import { DIAG, initialTier, quality, stepTier, TIERS, useQuality } from './stage/quality';
-import { stageTime, TEST_HOOKS, VIRTUAL_TIME } from './stage/time';
+import { setStageCovered, stageTime, TEST_HOOKS, VIRTUAL_TIME, whenUncovered } from './stage/time';
 import { BRIDGED, toolComponent } from './tools';
 import { cutAmount, cutOpen, FabScene, proxyHidden, type FabPicking } from './tools/Fab';
 import { waferProgramStandIn } from './wafer/Wafer';
@@ -383,9 +383,15 @@ function prewarm(gl: THREE.WebGLRenderer, group: THREE.Object3D, camera: THREE.C
     uploads();
     return;
   }
+  // (each part waits while a dialog covers the stage: see whenUncovered)
   const run = async () => {
+    await whenUncovered();
     await gl.compileAsync(group, camera, scene);
-    if (shared) await prewarmShared(gl, camera, scene, false);
+    if (shared) {
+      await whenUncovered();
+      await prewarmShared(gl, camera, scene, false);
+    }
+    await whenUncovered();
     uploads();
   };
   const p = prewarmChain.then(run);
@@ -787,8 +793,10 @@ function QualityControl({ onDpr }: { onDpr: (dpr: number) => void }) {
   useEffect(() => {
     onDpr(Math.min(TIERS[tier].dprMax, window.devicePixelRatio || 1));
   }, [tier, onDpr]);
-  // (the frame-stepped harness keeps its starting tier: its frame times mean nothing)
-  if (VIRTUAL_TIME) return null;
+  // (the frame-stepped harness keeps its starting tier: its frame times mean nothing; nor do the
+  // frames around a pause for a dialog, so the monitor starts afresh after one)
+  const covered = useStageCovered();
+  if (VIRTUAL_TIME || covered) return null;
   return (
     <PerformanceMonitor
       onDecline={() => stepTier(-1, 'frame rate too low')}
@@ -804,7 +812,43 @@ function QualityControl({ onDpr }: { onDpr: (dpr: number) => void }) {
 /** Capture tools that read the canvas after the frame (not in the same task) need this. */
 const CAPTURE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('capture') === '1';
 
+/**
+ * Round four: a dialog over the stage in a lesson or the explorer — Chapters, Look closer, the
+ * equipment list… — stops it: nothing is drawn under the scrim, and the stage clock waits, so
+ * lessons, moves and demonstrations carry on from where they were when it closes. Every frame
+ * the browser can make goes to the dialog (over a busy software-rendered stage the browser made
+ * a frame every few seconds, and the Chapters drawer stayed at the first, transparent frame of
+ * its slide-in). Watch keeps playing: its narration keeps its own clock.
+ */
+const useStageCovered = () => useApp((s) => s.panel !== null && s.mode !== 'watch');
+
+/** Under a dialog not one more frame is drawn: not even those the controls had asked for (the
+ * renderer's pending frames run on after its loop is told to stop). A resize meanwhile (a phone
+ * turned with Chapters open) clears the canvas, so the stage is drawn once more, as it stands. */
+function CoverStop() {
+  const get = useThree((s) => s.get);
+  const width = useThree((s) => s.size.width);
+  const height = useThree((s) => s.size.height);
+  const dpr = useThree((s) => s.viewport.dpr);
+  const covered = useStageCovered();
+  useLayoutEffect(() => {
+    if (covered) get().internal.frames = 0;
+  }, [covered, get]);
+  const drawnAt = useRef('');
+  useLayoutEffect(() => {
+    const at = `${width}x${height}@${dpr}`;
+    if (!VIRTUAL_TIME && covered && drawnAt.current && drawnAt.current !== at) advance(performance.now(), true, get());
+    drawnAt.current = at;
+  }, [covered, width, height, dpr, get]);
+  return null;
+}
+
 export function Stage() {
+  const covered = useStageCovered();
+  useEffect(() => {
+    if (!VIRTUAL_TIME) setStageCovered(covered);
+  }, [covered]);
+  useEffect(() => () => setStageCovered(false), []);
   const deviceScene = useMemo(() => new THREE.Scene(), []);
   useLayoutEffect(() => {
     deviceSpace.scene = deviceScene;
@@ -818,7 +862,7 @@ export function Stage() {
   return (
     <Canvas
       shadows="percentage"
-      frameloop={VIRTUAL_TIME ? 'never' : 'always'}
+      frameloop={VIRTUAL_TIME || covered ? 'never' : 'always'}
       dpr={dpr}
       gl={{ antialias: true, toneMapping: THREE.NeutralToneMapping, toneMappingExposure: 1.0, powerPreference: 'high-performance', preserveDrawingBuffer: CAPTURE }}
       camera={{ fov: 34, near: 0.05, far: 400, position: [18.8, 2.3, 1.6] }}
@@ -849,6 +893,7 @@ export function Stage() {
         truckSpeed={0.8}
       />
       <Director deviceScene={deviceScene} controlsRef={controlsRef} />
+      <CoverStop />
       <QualityControl onDpr={setDpr} />
       {(TEST_HOOKS || DIAG) && <DevHook deviceScene={deviceScene} />}
     </Canvas>
@@ -895,6 +940,7 @@ function DevHook({ deviceScene }: { deviceScene: THREE.Scene }) {
       gapStats,
       deviceMeshes,
       directorView,
+      stageTime,
     };
     (window as unknown as { __fabQuality: () => unknown }).__fabQuality = () => ({ ...useQuality.getState(), dpr: gl.getPixelRatio(), shadowRedraws: quality.shadowRedraws });
   }, [gl, scene, camera, deviceScene]);

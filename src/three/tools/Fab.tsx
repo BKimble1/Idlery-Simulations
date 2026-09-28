@@ -31,7 +31,7 @@ import type { MachineId } from '../../state/nav';
 import { Label } from '../labels';
 import { stationBoxes, stationMatrix } from '../stage/anchors';
 import { queueShadowPrewarm } from '../stage/shadowPrewarm';
-import { stageTime } from '../stage/time';
+import { stageTime, whenUncovered } from '../stage/time';
 import { TOOL_POSES } from '../poses';
 import { HOUSING_SHARE, innerOpening, sectionMaterial as cutMaterial } from '../kit/section';
 import { BEAM_Y } from './scannerMotion';
@@ -1688,8 +1688,10 @@ export function FabScene({ highlight, hero, picking }: { highlight?: SceneId; he
       // (round four) and the programs their shadows are drawn with (two-sided, as opened)
       queueShadowPrewarm(warm);
     };
+    // (not while a dialog covers the stage: see whenUncovered)
+    const later = () => void whenUncovered().then(run);
     const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
-    const h = idle ? idle(run, { timeout: 4000 }) : window.setTimeout(run, 1500);
+    const h = idle ? idle(later, { timeout: 4000 }) : window.setTimeout(later, 1500);
     return () => {
       done = true;
       if (!idle) window.clearTimeout(h);

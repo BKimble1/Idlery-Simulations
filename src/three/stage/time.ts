@@ -7,8 +7,10 @@
  *   now()    the page clock (ms). The film's silent moves run on it; it keeps going in a
  *            background tab, like the film's sound does.
  *   clock()  the stage clock (ms): stops while the page is hidden, so a camera move, a lesson
- *            or a demonstration resumes where it was when the viewer comes back. Everything
- *            the director and the lesson clocks time is measured on it.
+ *            or a demonstration resumes where it was when the viewer comes back — and (round
+ *            four) while a dialog covers the stage (Chapters, Look closer, the equipment list…),
+ *            when the stage is not drawn at all. Everything the director and the lesson clocks
+ *            time is measured on it.
  *   decor    decorative time (s) for motion that tells no process story (fans, flicker, the
  *            overhead vehicles): the stage clock, or the film's own time while the film is on
  *            screen, so a seek in Watch shows exactly the frame that playing would. Set once
@@ -20,20 +22,42 @@ export const VIRTUAL_TIME = typeof window !== 'undefined' && new URLSearchParams
 export const TEST_HOOKS =
   typeof window !== 'undefined' && (import.meta.env.DEV || VIRTUAL_TIME || new URLSearchParams(window.location.search).get('hooks') === '1');
 
-let hiddenAt: number | null = null;
-let hiddenTotal = 0;
+/** Why the stage clock is stopped: the page hidden, the stage covered by a dialog. */
+const stops = new Set<'hidden' | 'covered'>();
+let stoppedAt: number | null = null;
+let stoppedTotal = 0;
+function stopClock(reason: 'hidden' | 'covered', on: boolean) {
+  const t = performance.now();
+  const was = stops.size > 0;
+  if (on) stops.add(reason);
+  else stops.delete(reason);
+  if (!was && stops.size > 0) stoppedAt = t;
+  else if (was && stops.size === 0 && stoppedAt !== null) {
+    stoppedTotal += t - stoppedAt;
+    stoppedAt = null;
+  }
+}
 if (typeof document !== 'undefined') {
-  const onVisibility = () => {
-    const t = performance.now();
-    if (document.hidden) {
-      if (hiddenAt === null) hiddenAt = t;
-    } else if (hiddenAt !== null) {
-      hiddenTotal += t - hiddenAt;
-      hiddenAt = null;
-    }
-  };
+  const onVisibility = () => stopClock('hidden', document.hidden);
   document.addEventListener('visibilitychange', onVisibility);
   onVisibility();
+}
+
+const uncovered: (() => void)[] = [];
+
+/** A dialog covers the stage (or no longer does): the stage clock stops meanwhile (see Stage). */
+export function setStageCovered(on: boolean) {
+  stopClock('covered', on);
+  if (!on) for (const go of uncovered.splice(0)) go();
+}
+
+/**
+ * Resolves once no dialog covers the stage (at once when none does). Preparing machines for the
+ * GPU waits on it: on a software renderer each program compiled ties up the renderer for
+ * seconds, and the dialog's own frames would wait behind it.
+ */
+export function whenUncovered(): Promise<void> {
+  return stops.has('covered') ? new Promise((go) => uncovered.push(go)) : Promise.resolve();
 }
 
 export const stageTime = {
@@ -45,10 +69,11 @@ export const stageTime = {
   now(): number {
     return this.virtual ? this.t * 1000 : performance.now();
   },
-  /** The stage clock, milliseconds: the page clock minus the time the page spent hidden. */
+  /** The stage clock, milliseconds: the page clock minus the time the page spent hidden or the
+   * stage covered by a dialog. */
   clock(): number {
     if (this.virtual) return this.t * 1000;
-    return (hiddenAt ?? performance.now()) - hiddenTotal;
+    return (stoppedAt ?? performance.now()) - stoppedTotal;
   },
   /** Decorative time in seconds (see above); updated at the start of every frame. */
   decor: 0,

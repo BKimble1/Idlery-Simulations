@@ -551,6 +551,36 @@ What the brief asked for, what was found and what was done. Frame sequences are 
   headless Chromium on Linux (Playwright's build); whether a desktop browser can meet the same
   wait was not tested. Separately, a fresh load of the explorer's scanner view keeps the page
   busy for 4–8 s on this software renderer before it answers again (it always recovers).
+* **Chapters did not open** (reported by the user at the end of the round; fixed). Clicking
+  *Chapters* in a lesson put the drawer in the page at once, but it slid in from fully
+  transparent, and its transparent first frame stayed on screen for as long as the browser made
+  no new frames — on this software renderer, where a frame of the coat lesson ties up the GPU
+  process for 2–4 s and the drawer's own text is drawn by the same renderer, for seconds; a
+  second click, landing on the drawer's invisible backdrop, closed it again. Round three has
+  the same fade and the same wait. Measured with a Chrome trace of a click on *Chapters* 20 s
+  into the coat lesson (1440 × 900; the time at which the first screenshot showing the drawer
+  was due on screen; `node scripts/dialog-latency.mjs <base> --runs 3`): round three's build
+  4.6, 6.3 and 8.0 s in three runs, this round's before the fix (`65f4e12`) 2.3, 4.5 and 9.4 s,
+  with the drawer transparent in the first picture that had it. Fixed three ways: dialogs and cards slide in
+  fully opaque (`styles/app.css`; the *Look closer* modal and the film's end card also lost a
+  jump — their rise replaced their centring for its duration); while a dialog covers the stage
+  in a lesson or the explorer, the stage draws nothing, not even the frames its controls had
+  already asked for, and its clock stops, so the lesson carries on from where it was when the
+  dialog closes (`Stage.tsx`, `stage/time.ts`); and preparing machines for the GPU waits until
+  it closes (a program compiled then held the dialog's frames back for seconds more). After the
+  fix: 2.3, 4.7 and 5.9 s, the drawer opaque in the first picture that has it, and not one frame
+  of the stage after the click (before it, 14–18 in the next 22 s; round three 22–24), so the
+  page answers at full rate while the drawer is open. What remains on this renderer is the
+  stage's frame that was already on its way when the click came: with WebGL switched off, the
+  same drawer is on screen 34 ms after the click on the same software compositor (on graphics
+  hardware the wait is one frame of the stage — not measured). A resize under a dialog (a phone
+  turned with Chapters open) clears the canvas, and with the stage stopped it stayed cleared (a
+  luminance spread of 12.4 beside the drawer, against 39.1 with a picture); the stage is now
+  drawn once more, as it stood. The *Chapters* button and Watch's
+  chapter marks are the elements under their own centres at 1440 × 900, 1024 × 768, 390 × 844
+  and 844 × 390, and a test opens the first lesson of every chapter from the drawer. A change
+  that follows: a lesson now pauses under *Look closer*, *What changed?* and the legend (it
+  played on underneath before); Watch plays on under its own dialogs.
 
 **The whole course, move by move** (`node scripts/probe.mjs <base> walk.json --cases
 transitions`): the probe walks the course on one page as a learner would — each lesson
@@ -830,14 +860,14 @@ as described in [`docs/ROUND3.md`](ROUND3.md#measure-it-on-your-hardware).
 
 ## Verification: commands and results
 
-On the final build — application code at `0e35bcf`; the commits after it on the branch add
-only this document's results — on the machine described under *Method*:
+On the final build — application code at `65f4e12`; the commits after it on the branch add
+only this document's results and recordings — on the machine described under *Method*:
 
 | command | result |
 |---|---|
 | `npm run typecheck` | passes (`tsc -b`: the app, the unit tests, and the Playwright specs and configs; no errors) |
-| `npm test` | 58 tests in 5 files pass: round three's 42, and 16 new in `src/three/stage/round4.test.ts` (section cuts, camera routes, the room, reveal in place, the lithography cell) |
-| `npm run build` | succeeds (`tsc -b && vite build`, about 1.3 s for vite): the site is 43 files, 2.4 MB, listed with their sha256 in `dist/app-files.json`; with the film's narration (4.5 MB) the offline download is still about 7 MB |
+| `npm test` | 63 tests in 5 files pass: round three's 42, and 21 new in `src/three/stage/round4.test.ts` (section cuts; camera routes: back out, move in, pan round between facing machines; the room; out of the layers to another machine from your die — the machine's framing, a dissolve, upward; reveal in place; the lithography cell; the stage clock under a dialog) |
+| `npm run build` | succeeds (`tsc -b && vite build`; vite's part 1.3–2.4 s): the site is 43 files, 2.4 MB, listed with their sha256 in `dist/app-files.json`; with the film's narration (4.5 MB) the offline download is still about 7 MB |
 <!--E2E-RESULT-->
 | `node scripts/perf.mjs <base> <out.json> --label …`, round three's build and this one | the tables in [Real-time playback](#real-time-playback-software-rendering) |
 | `node scripts/programs.mjs <base> --step adi` and `--step transfer`, both builds | shader programs during moves, same section |
@@ -865,6 +895,7 @@ tests named here still pass on this round's build):
 | readiness, failure, rapid navigation | `e2e/loading.spec.ts` (four tests: a late machine, changing your mind while one loads, a machine that fails, the first picture only when ready); `e2e/modes.spec.ts` "rapid navigation: the last request wins and no stale camera move completes"; `round4.spec.ts` "the last lesson loads in a fresh browser without the page freezing" |
 | Watch: pause, seek, narration during a slow load | `round4.spec.ts` "Watch: the narration waits for a machine that is still loading, and carries on where it stopped" (harness clock) and "Watch, with its narration (real time): Play or a seek during a hold does not start the narration; a background tab plays it on" (the track's module held at the network: the narration silent and the clock still through the wait, *Play* and a seek; playing on in a background tab; waiting again on return; running once the track is in); `e2e/film-continuity.spec.ts` (seek = play, chapter jumps); `e2e/watch.spec.ts` (the narration clock through pause, seek, speed, mute, a background tab) |
 | reduced motion | `round4.spec.ts` "reduced motion: a machine and its chamber open at once, without a moving cut"; `continuity.spec.ts` "reduced motion: moves become still cross-fades, and still nothing jumps" |
+| Chapters (the user's report) and the dialogs over the stage | `round4.spec.ts` "Chapters opens at once over a busy stage, and the lesson waits behind it (real time)" (the drawer fully opaque as it appears and pictured within 30 s; not one frame of the stage from the key press; the lesson's progress and the stage clock still while it is open; after a resize under it, exactly one frame; frames and the lesson carrying on after *Escape*) and "every chapter opens from the Chapters drawer: its first lesson, at its machine" (desktop and phone); `round4.test.ts` "a dialog over the stage" (the stage clock stops, work waiting for the stage goes on when it closes); `modes.spec.ts` "chapters drawer, deep links and browser history agree"; `journey.spec.ts` "keyboard: start, advance, chapters, inspect layers"; `watch.spec.ts` and `film-continuity.spec.ts` (Watch's chapter marks) |
 | resource stability | `continuity.spec.ts` "going back and forth through the lessons does not accumulate GPU resources"; `perf.mjs` `nav-loop` (resources before and after, above) |
 | the magnified inset and the light-path overlay | `round4.spec.ts` "the magnified inset shows the immersion film while the scanner exposes, moving with the stage" (desktop and phone: the wafer moves with the stage, the same progress gives the same inset, 193 nm light only with the overlay, which the picture then names; clear of the scale label; gone after the lesson moves on) and "the magnified inset is not drawn over the layers" |
 
@@ -877,7 +908,8 @@ the CD-SEM → gate etch case at frame 18 (a spread of 0.0) on the build before 
 (`0e35bcf`); the real-time Watch test at "Play during the hold: no narration while the picture
 waits" on the build before the player's fixes (`cd29ffc`), and at "no hold in a background
 tab" on that build with only the first of them applied; round three's seek test ("a seek shows
-exactly the frame that playing would") at a difference of 17.2 on `cd29ffc`.
+exactly the frame that playing would") at a difference of 17.2 on `cd29ffc`; the Chapters test
+at its first check on `65f4e12` (the drawer in the page with an opacity of 0).
 
 No assertion was loosened and no test skips a failure; the new frame-by-frame tests run once, at
 the desktop size (they step frames and read pixels), and their waits are conditions (the camera
@@ -941,6 +973,10 @@ exactly what it did.
   two's explorer recording shows the same frame, so it predates this round): the canvas is
   resized, which clears it, before the next frame is drawn. Whether a browser running in real
   time shows that frame was not checked.
+* **On a software renderer a dialog still waits for the stage's frame in flight**: 2.3–5.9 s
+  after the click for the Chapters drawer on this machine (34 ms with WebGL off). Keeping the
+  stage to one frame queued when frames are this slow would shorten it; it was not done this
+  round, since on graphics hardware the same limit would cost frame rate.
 
 **Not verified in this session.**
 

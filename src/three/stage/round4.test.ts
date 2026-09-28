@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { STATIONS } from '../tools/poses/fab';
 import { CARRIER_X, IFACE_X, MOD_X, MODS, ROUTES } from '../tools/trackMotion';
 import { BEAM_Y, GRANITE_TOP, HOOD_Y0, LENS_H, LENS_TOP, LENS_Y0, RETICLE_Y, WAFER_TOP } from '../tools/scannerMotion';
@@ -7,6 +7,7 @@ import { everything, HOUSING_SHARE, innerOpening, slicePlane, wedgePlanes } from
 import { BAY } from '../tools/poses/fab';
 import { stationBoxes, stationGroups, waferRegistry } from './anchors';
 import { backOutPose, directLeg, evalLegs, planTransition } from './flights';
+import { setStageCovered, stageTime, whenUncovered } from './time';
 import { BASE_FOV, fitInRoom, fovOf, lensFor, machinePose, makePose, makeSample, resolve, ROOM, type CamPose } from './tracks';
 
 /** Removed by a cut in intersection mode: on the negative side of every plane. */
@@ -429,5 +430,37 @@ describe('the lithography cell, as a fab lays it out (round four)', () => {
     // the beam enters the illuminator above the reticle, under the enclosure's raised roof (3.3 m)
     expect(BEAM_Y).toBeGreaterThan(RETICLE_Y);
     expect(BEAM_Y + 0.16).toBeLessThan(3.3);
+  });
+});
+
+describe('a dialog over the stage (round four: Chapters)', () => {
+  it('stops the stage clock while it is open; work that waits for the stage goes on when it closes', async () => {
+    let t = 1000;
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => t);
+    try {
+      const c0 = stageTime.clock();
+      setStageCovered(true);
+      setStageCovered(true); // (twice is still once)
+      t += 5000;
+      expect(stageTime.clock()).toBe(c0);
+      let went = false;
+      const waiting = whenUncovered().then(() => (went = true));
+      await Promise.resolve();
+      expect(went).toBe(false);
+      setStageCovered(false);
+      await waiting;
+      expect(went).toBe(true);
+      t += 100;
+      // the lesson carries on from where it was: none of the 5 s under the dialog is counted
+      expect(stageTime.clock()).toBe(c0 + 100);
+      // nothing covers the stage: no wait
+      let at = false;
+      const once = whenUncovered().then(() => (at = true));
+      await Promise.resolve();
+      expect(at).toBe(true);
+      await once;
+    } finally {
+      now.mockRestore();
+    }
   });
 });
