@@ -14,6 +14,9 @@ export const POSE: ToolPose = {
   // The module line stands in the front half of the track's housing (poses: Fab.tsx, track).
   mount: { yaw: 0, offset: [-0.35, 0.5] },
   cutaway: { z: 0.12, y: 0.86 },
+  // your die in a cup, under the module's cover: dissolve from it to this framing on the way to
+  // the next machine (the straight way out clips the front of the cell)
+  leaveFade: true,
   variants: {
     prime: { pos: [-0.84, 1.38, 0.8], target: [-1.12, 0.94, -0.05] },
     coat: { pos: [-0.14, 1.38, 0.82], target: [-0.42, 0.92, -0.05] },

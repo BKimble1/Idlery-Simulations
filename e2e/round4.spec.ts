@@ -184,10 +184,17 @@ async function followMove(page: Page, frames = 150) {
   return out;
 }
 
-for (const [label, step, p] of [
-  ['out of the etch cluster from a wafer in its load lock, to the polisher (STI etch → STI fill)', 'sti-etch', 0.97],
-  ['from the dicing saw to the die bonder (dice → attach)', 'dice', 0.97],
-  ['from the CD-SEM to the etch cluster, which face each other across the aisle (ADI → gate etch)', 'adi', 0.97],
+// (the least luminance spread every frame of the move must have: 6 for a camera among the
+// machines; 1.5, the probe's own count of blank frames, for a move that starts on your die out
+// of the layers, whose close-up of a pale, polished or developed wafer is legitimately flat)
+for (const [label, step, p, least] of [
+  ['out of the etch cluster from a wafer in its load lock, to the polisher (STI etch → STI fill)', 'sti-etch', 0.97, 6],
+  ['from the dicing saw to the die bonder (dice → attach)', 'dice', 0.97, 6],
+  ['from the CD-SEM to the etch cluster, which face each other across the aisle (ADI → gate etch)', 'adi', 0.97, 6],
+  ['out of the layers and the polisher from your die, to the deposition cluster (metal 2 → passivation)', 'metal2', 0.97, 1.5],
+  ['out of the layers and the furnace\'s tower from your die, to the deposition cluster (anneal → gate stack)', 'anneal', 0.97, 1.5],
+  ['out of the layers and the developer from your die, to the CD-SEM (develop → ADI)', 'develop', 0.97, 1.5],
+  ['out of the layers and the scanner from your die, to the etch cluster (contact print → contact etch)', 'contact-print', 0.97, 1.5],
 ] as const) {
   test(`the camera travels through free space and never shows a blank frame: ${label}`, async ({ page }, info) => {
     onlyDesktop(info.project.name);
@@ -205,12 +212,15 @@ for (const [label, step, p] of [
     const frames = await followMove(page);
     const world = frames.filter((f) => f.space === 'world');
     expect(world.length).toBeGreaterThan(20);
+    const dissolving = (f: FrameSample) => f.mix > 1e-6 && f.mix < 1 - 1e-6;
     for (let i = 1; i < frames.length; i++) {
       if (frames[i].space !== 'world' || frames[i - 1].space !== 'world') continue;
+      // (across a dissolve the camera jumps from one picture's to the other's: no path to follow)
+      if (dissolving(frames[i]) || dissolving(frames[i - 1])) continue;
       const hit = await pathBlocked(page, frames[i - 1].cam, frames[i].cam);
       expect(hit, `frame ${i} (from ${frames[i - 1].cam.map((v) => v.toFixed(2))} to ${frames[i].cam.map((v) => v.toFixed(2))}): the camera's path crosses ${hit}`).toBeNull();
     }
-    for (const [i, f] of world.entries()) expect(spread(f), `frame ${i} is not blank`).toBeGreaterThan(6);
+    for (const [i, f] of world.entries()) expect(spread(f), `frame ${i} is not blank`).toBeGreaterThan(least);
     expect(worstJump(frames, 1).ratio, 'no one-frame jump').toBeLessThan(4);
     expect(errors).toEqual([]);
   });

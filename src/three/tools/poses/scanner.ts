@@ -14,6 +14,9 @@ export const POSE: ToolPose = {
   mount: { yaw: 0, offset: [0, 0.25] },
   // The housing opens in front of the rear bulkhead, above the reveal its lower panels stop at.
   cutaway: { z: -0.75, y: 1.03 },
+  // your die lies under the projection lens: dissolve from it to this framing on the way to the
+  // next machine (pulling the camera out swept the lens barrel across the picture)
+  leaveFade: true,
   shots: {
     // the reticle library, where the handler takes the layer's reticle off its shelf
     reticleLib: { pos: [2.62, 2.86, 1.05], target: [1.72, 2.3, -0.12] },

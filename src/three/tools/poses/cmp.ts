@@ -12,4 +12,7 @@ export const POSE: ToolPose = {
   target: [-0.3, 0.95, 0.1],
   mount: { yaw: 0, offset: [0.35, 0.5] },
   cutaway: { z: 1.412, y: 1.25 },
+  // your die at the clean station, under the upper works: dissolve from it to this framing on the
+  // way to the next machine (the straight way out clips the parts around it)
+  leaveFade: true,
 };

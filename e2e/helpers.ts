@@ -118,6 +118,8 @@ export interface FrameSample {
   fov: number;
   space: string;
   flying: boolean;
+  /** How far a dissolve between two pictures has got (0: none): the camera jumps across one. */
+  mix: number;
 }
 
 /** Render one harness frame and read back what it drew (the picture and the learner's wafers). */
@@ -134,6 +136,7 @@ export async function sampleFrame(page: Page): Promise<FrameSample> {
         stationGroups: Map<string, O3>;
         useStageInfo: { getState: () => { space: string; flying: boolean } };
         THREE: { Vector3: new (x?: number, y?: number, z?: number) => V3 };
+        directorView?: { live: { mix: number } | null };
       };
     };
     w.__fabAdvance(1);
@@ -175,6 +178,7 @@ export async function sampleFrame(page: Page): Promise<FrameSample> {
       fov: f.camera.fov,
       space: info.space,
       flying: info.flying,
+      mix: f.directorView?.live?.mix ?? 0,
     } as FrameSample;
   });
 }

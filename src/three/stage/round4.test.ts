@@ -282,28 +282,37 @@ describe('the room: cameras among the machines stay over the aisle and under the
 });
 
 describe('out of the layers to another machine, from your die inside this one (round four)', () => {
-  it('the camera leaves the way it comes in to inspect the layers: to the machine\'s own framing, then travels', () => {
-    // your wafer at the polisher's clean station, as its model registers it
+  const withWafer = (id: 'furnace' | 'cmp' | 'etch', at: [number, number, number], fn: () => void) => {
     const station = new THREE.Group();
     const wafer = new THREE.Mesh();
-    wafer.position.set(-4.54, 0.94, 2.66);
+    wafer.position.set(...at);
     station.add(wafer);
     station.updateMatrixWorld(true);
-    stationGroups.set('cmp', station);
-    waferRegistry.set('cmp', wafer);
+    stationGroups.set(id, station);
+    waferRegistry.set(id, wafer);
     try {
-      const section = makePose();
-      section.space = 'device';
-      section.scale = 'device';
-      section.pos.set(-4.29, 3.7, 7.84);
-      section.target.set(0, 0.35, -0.3);
-      const to = pose([-7.64, 2.71, 1.81], [-9.4, 1.0, 3.75]);
-      const legs = planTransition(section, () => to, { from: 'cmp', to: 'depo', establish: true, reduced: false, fit: () => {} });
-      const home = resolve({ kind: 'shot', name: 'establish' }, { station: 'cmp' }, makePose());
-      const die = resolve({ kind: 'wafer', framing: 'die' }, { station: 'cmp' }, makePose());
+      fn();
+    } finally {
+      stationGroups.clear();
+      waferRegistry.clear();
+    }
+  };
+  const section = makePose();
+  section.space = 'device';
+  section.scale = 'device';
+  section.pos.set(-4.29, 3.7, 7.84);
+  section.target.set(0, 0.35, -0.3);
+  const depo = pose([-7.64, 2.71, 1.81], [-9.4, 1.0, 3.75]);
+
+  it('the camera leaves the way it comes in to inspect the layers: to the machine\'s own framing, then travels (the furnace)', () =>
+    // your wafer at the furnace's load station, in its tower
+    withWafer('furnace', [-5.69, 2.12, -4.38], () => {
+      const legs = planTransition(section, () => depo, { from: 'furnace', to: 'depo', establish: true, reduced: false, fit: () => {} });
+      const home = resolve({ kind: 'shot', name: 'establish' }, { station: 'furnace' }, makePose());
+      const die = resolve({ kind: 'wafer', framing: 'die' }, { station: 'furnace' }, makePose());
       const s = makeSample();
-      // out of the layers onto your die, then straight to the polisher's own framing: the camera
-      // never backs out along its line of sight into the machine's upper works
+      // out of the layers onto your die, then straight to the furnace's own framing: the camera
+      // never backs out along its line of sight up the tower
       legs[0].eval(1, s);
       // (the fade out of the layers ends on its world picture)
       expect(s.mix).toBeCloseTo(1, 9);
@@ -321,27 +330,27 @@ describe('out of the layers to another machine, from your die inside this one (r
       expect(legs[1].between).toBeFalsy();
       expect(legs[2].between, 'the wafer changes hands on the travel, after it').toBe(true);
       legs[legs.length - 1].eval(1, s);
-      expect(s.a.pos.distanceTo(to.pos)).toBeLessThan(1e-6);
-    } finally {
-      stationGroups.clear();
-      waferRegistry.clear();
-    }
-  });
+      expect(s.a.pos.distanceTo(depo.pos)).toBeLessThan(1e-6);
+    }));
 
-  it('from your die in the etch cluster\'s load lock, the camera leaves upward, along its line of sight', () => {
-    const station = new THREE.Group();
-    const wafer = new THREE.Mesh();
-    wafer.position.set(-0.68, 1.0, -3.24);
-    station.add(wafer);
-    station.updateMatrixWorld(true);
-    stationGroups.set('etch', station);
-    waferRegistry.set('etch', wafer);
-    try {
-      const section = makePose();
-      section.space = 'device';
-      section.scale = 'device';
-      section.pos.set(-4.29, 3.7, 7.84);
-      section.target.set(0, 0.35, -0.3);
+  it('from a die in a tight space (the polisher\'s clean station), the picture dissolves to the machine\'s framing', () =>
+    withWafer('cmp', [-4.54, 0.94, 2.66], () => {
+      const legs = planTransition(section, () => depo, { from: 'cmp', to: 'depo', establish: true, reduced: false, fit: () => {} });
+      const home = resolve({ kind: 'shot', name: 'establish' }, { station: 'cmp' }, makePose());
+      const die = resolve({ kind: 'wafer', framing: 'die' }, { station: 'cmp' }, makePose());
+      const s = makeSample();
+      for (const u of [0, 0.5, 1]) {
+        legs[1].eval(u, s);
+        // both pictures held still: your die, and the machine's framing; the dissolve between them
+        expect(s.a.pos.distanceTo(die.pos)).toBeLessThan(1e-6);
+        expect(s.b.pos.distanceTo(home.pos)).toBeLessThan(1e-6);
+        expect(s.mix).toBeCloseTo(u, 9);
+      }
+      expect(legs[2].between, 'then the travel').toBe(true);
+    }));
+
+  it('from your die in the etch cluster\'s load lock, the camera leaves upward, along its line of sight', () =>
+    withWafer('etch', [-0.68, 1.0, -3.24], () => {
       const to = pose([-6.1, 2.75, 0.65], [-4.95, 0.95, 2.85]);
       const legs = planTransition(section, () => to, { from: 'etch', to: 'cmp', establish: true, reduced: false, fit: () => {} });
       const die = resolve({ kind: 'wafer', framing: 'die' }, { station: 'etch' }, makePose());
@@ -354,11 +363,7 @@ describe('out of the layers to another machine, from your die inside this one (r
       }
       legs[1].eval(1, s);
       expect(s.a.pos.y).toBeCloseTo(2.4, 6);
-    } finally {
-      stationGroups.clear();
-      waferRegistry.clear();
-    }
-  });
+    }));
 });
 
 describe('into the layers and back, at a machine whose wafer is not in view (round four)', () => {

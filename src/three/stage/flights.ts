@@ -151,10 +151,10 @@ export function backOutPose(from: CamPose): CamPose | null {
 }
 
 /** Reduced motion: hold both compositions still and cross-fade between them. */
-export function fadeLeg(from: CamPose, target: () => CamPose): Leg {
+export function fadeLeg(from: CamPose, target: () => CamPose, dur = 0.35): Leg {
   const f = copyPose(makePose(), from);
   return {
-    dur: 0.35,
+    dur,
     across: true,
     eval: (u, out) => {
       copyPose(out.a, f);
@@ -256,7 +256,9 @@ export function planTransition(start: CamPose, target: () => CamPose, o: Transit
       // cluster's load lock), as from any other close view of the wafer (worldPath).
       const home = resolve({ kind: 'shot', name: 'establish' }, { station: origin }, makePose());
       o.fit(home);
-      legs.push(directLeg(onWafer, () => home));
+      // (a die under the scanner's lens: dissolve out of the tight space rather than squeeze past
+      // the lens barrel, which filled the picture on the way out — `leaveFade`)
+      legs.push(TOOL_POSES[origin].leaveFade ? fadeLeg(onWafer, () => home, 0.6) : directLeg(onWafer, () => home));
       worldPath(home);
     } else worldPath(onWafer);
   } else {

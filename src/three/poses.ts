@@ -46,6 +46,12 @@ export type ToolPose = Pose & {
    * opened housing, where the straight way to the framing crosses a part.
    */
   leaveUp?: boolean;
+  /**
+   * Round four: leaving for another machine from the learner's die inside this one, the picture
+   * dissolves from the die to the machine's own framing instead of the camera moving there: for
+   * a die in a space too tight to leave through (under the scanner's projection lens).
+   */
+  leaveFade?: boolean;
 };
 
 export const WAFER_POSE: Pose = { pos: [0, 0.5, 0.4], target: [0, -0.02, 0.0], min: 0.15, max: 1.4 };
