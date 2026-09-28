@@ -502,7 +502,16 @@ rim is rounded (0.4 mm).
 
 **The camera through free space** (`stage/flights.ts`). Leaving a close view of the wafer for
 another machine, the camera first backs out along its own line of sight to 2.4 m
-(`backOutPose`); the move in from an establishing shot is direct; *Inspect layers* at a machine
+(`backOutPose`) — except straight out of the layers from your die inside the machine, where it
+goes to the machine's own framing first, the way it comes in to inspect the layers (the die
+framing is taken from that framing), and travels from there: the line of sight from the die
+passes through a module's cover, a polisher's upper works or a furnace's tower. A machine whose
+die has nothing above it but the opened housing sets `leaveUp` in its pose file and backs out
+upward instead (the etch cluster: the straight way from its load lock to its framing crosses
+the load lock's lid), and one whose die lies in a space too tight to leave through sets
+`leaveFade` and dissolves from the die to its framing in 0.6 s (the scanner: your die under the
+projection lens; the track: in a cup under the module's cover; the polisher: at its clean
+station); the move in from an establishing shot is direct; *Inspect layers* at a machine
 whose wafer is not in view reveals the layers from where the camera is, and *Back to
 equipment* fades straight into the machine's framing (no flight out to its establishing shot
 and back). A direct move that turns the view by more than a quarter turn — between machines

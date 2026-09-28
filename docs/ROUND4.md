@@ -49,8 +49,9 @@ end commit given in [Verification](#verification-commands-and-results).
   there is metal; the reticle carries the same plan at 4×. The wafer's rim is rounded.
 * **The camera travels through free space.** Among the machines it stays over the aisle and
   under the ceiling (a large machine is established with a wider lens, not from over the other
-  row at the ceiling, where round three's camera went through it). Leaving a close view of the
-  wafer it backs out along its line of sight before travelling; the move in from an
+  row at the ceiling, where round three's camera went through it). Leaving your die for another
+  machine it first returns to that machine's own view (from the etch cluster's load lock it
+  backs out upward) before travelling; the move in from an
   establishing shot is direct; *Inspect layers* at a machine whose wafer is out of view reveals
   the layers from where the camera is; between machines that face each other across the aisle
   it pans round instead of dipping to the floor. The blank frames between the dicing saw and
@@ -474,7 +475,28 @@ What the brief asked for, what was found and what was done. Frame sequences are 
   quarter turn now pans about the vertical — heading the short way round, pitch and the distance
   to what it looks at in proportion (`stage/tracks.ts` `turnPose`, used by `flights.ts`), over
   a little more time (1 s plus 0.45 s per radian of turn): on the same move the view is never
-  steeper than 32° and the lowest spread is 22.4; the move takes 120 frames instead of 91. (the prober, for example, holds
+  steeper than 32° and the lowest spread is 22.4; the move takes 120 frames instead of 91.
+* **Leaving a machine from your die, straight out of the layers** (regressions of this round's
+  back-out, found at the end of the round by walking the whole course move by move; fixed).
+  Leaving a close view of the wafer for another machine, this round's camera backed out along
+  its line of sight to 2.4 m — the fix for STI etch → STI fill. Four other moves leave a machine
+  from your die straight out of the layers, and there the line of sight ran through the
+  machine: at the developer through the module's cover (a white frame, then the cover over most
+  of the picture: a change of 60 levels in one frame), at the polisher into its upper works
+  (11 blank frames, a spread of 0.1), in the furnace's tower (the camera stayed inside and looked
+  at the inside of the tower's front: 2 blank frames), and at the scanner through the lens
+  barrel (1 blank frame). Round three's walk found none of these. Leaving for another machine
+  from your die, the camera now goes to the machine's own framing first — the way it comes in to
+  inspect the layers, since the die framing is taken from that framing — and travels from there
+  (`flights.ts`) — the furnace, for one. Where that straight way is not clear, the machine says
+  so in its pose file: the etch cluster keeps the upward back-out (`leaveUp`: the straight way
+  from its load lock crosses the load lock's lid), and the scanner, the track and the polisher
+  dissolve from your die to their framing in 0.6 s (`leaveFade`): moving the camera out of the
+  scanner swept the lens barrel across the picture (a change of 99 levels in one frame), and
+  the free-space test's ray-cast found the straight way out clipping the front of the develop
+  cell and a part beside the polisher's clean station. After the fixes the walk finds no blank
+  frame on any of the 36 moves (see below).
+* **Inspect layers at a machine whose wafer is out of view** (the prober, for example, holds
   the wafer under its probe card) first flew out to the machine's establishing shot. Measured on
   round three's build: the camera turned away from the prober down onto the aisle floor — for
   five frames the picture is nothing but floor, two of them a single flat colour (luminance
@@ -529,6 +551,69 @@ What the brief asked for, what was found and what was done. Frame sequences are 
   headless Chromium on Linux (Playwright's build); whether a desktop browser can meet the same
   wait was not tested. Separately, a fresh load of the explorer's scanner view keeps the page
   busy for 4–8 s on this software renderer before it answers again (it always recovers).
+
+**The whole course, move by move** (`node scripts/probe.mjs <base> walk.json --cases
+transitions`): the probe walks the course on one page as a learner would — each lesson
+finished, *Continue* pressed, every frame of the move recorded until the camera settles
+(1280 × 800, on the harness clock; a frame with under 1.5 levels of luminance spread over its
+16 × 16 grid counts as blank, under 4 as low in detail). Round three's figures are from its own
+walk (`docs/ROUND3.md`); round four's from the final build (the six moves that leave the
+scanner, the track or the polisher were walked again after their departures became
+dissolves; the rest of the course is the same build before that change, which does not touch
+them).
+
+| # | lesson → next | machines | worst jump: three → four | wafers on screen: three → four | largest wafer step, m/frame: three → four | blank frames: three → four | frames under 4 levels (four) | least detail (four) | frames: three → four | hand-over frame: three → four |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | arrive → transfer | foup | ×1.6 → ×1.62 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 31.74 | 26 → 26 | — → — |
+| 2 | transfer → scan | foup → inspect | ×1.78 → ×2.44 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 25.85 | 106 → 105 | 28 → 20 |
+| 3 | scan → clean | inspect → wetclean | ×2.29 → ×1.47 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 15.66 | 132 → 136 | 33 → 56 |
+| 4 | clean → diemap | wetclean → inspect | ×1.44 → ×1.37 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 16.2 | 90 → 99 | 20 → 20 |
+| 5 | diemap → padox | inspect → furnace | ×2.46 → ×2.03 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 5.09 | 140 → 135 | 37 → 61 |
+| 6 | padox → sti-etch | furnace → etch | ×1.72 → ×2.11 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 17.91 | 109 → 103 | 31 → 28 |
+| 7 | sti-etch → sti-fill | etch → cmp | ×3.36 → ×2.75 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 10.58 | 141 → 165 | 53 → 83 |
+| 8 | sti-fill → wells | cmp → implant | ×1.53 → ×1.74 | 0 → 0 | 0 → 0 | 0 → 0 | 0 | 19.82 | 105 → 103 | 29 → 28 |
+| 9 | wells → anneal | implant → furnace | ×1.43 → ×1.59 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 19.11 | 170 → 137 | 69 → 64 |
+| 10 | anneal → gatestack | furnace → depo | ×1.81 → ×2.42 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 8.24 | 123 → 204 | 53 → 118 |
+| 11 | gatestack → prime | depo → track | ×2.07 → ×2.18 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 13.2 | 145 → 136 | 39 → 35 |
+| 12 | prime → coat | track | — → — | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 27.48 | 20 → 20 | — → — |
+| 13 | coat → softbake | track | — → — | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 36.17 | 20 → 20 | — → — |
+| 14 | softbake → reticle | track → scanner | ×1.4 → ×1.78 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 15.11 | 116 → 118 | 33 → 30 |
+| 15 | reticle → align | scanner | ×1.39 → ×1.1 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 48.65 | 41 → 36 | — → — |
+| 16 | align → expose | scanner | ×1.44 → ×1.45 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 48.26 | 41 → 41 | — → — |
+| 17 | expose → peb | scanner → track | ×1.39 → ×1.21 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 17.75 | 126 → 97 | 28 → 20 |
+| 18 | peb → develop | track | ×1.23 → ×1.52 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 9.88 | 62 → 63 | — → — |
+| 19 | develop → adi | track → metrology | ×2.15 → ×3.07 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 8.82 | 153 → 171 | 61 → 82 |
+| 20 | adi → gate-etch | metrology → etch | ×1.43 → ×2.61 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 22.39 | 108 → 120 | 29 → 35 |
+| 21 | gate-etch → strip | etch | ×1.21 → ×1.21 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 36.18 | 52 → 52 | — → — |
+| 22 | strip → sd | etch → implant | — → — | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 27.98 | 26 → 26 | 13 → 13 |
+| 23 | sd → pmd | implant → depo | ×4.34 → ×2.36 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 21.92 | 148 → 144 | 65 → 61 |
+| 24 | pmd → contact-align | depo → scanner | ×2.12 → ×2.06 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 15 | 154 → 149 | 44 → 42 |
+| 25 | contact-align → contact-print | scanner | ×0.4 → ×0.65 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 53.18 | 20 → 20 | — → — |
+| 26 | contact-print → contact-etch | scanner → etch | ×1.59 → ×1.54 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 12.36 | 148 → 165 | 65 → 83 |
+| 27 | contact-etch → contact-fill | etch → cmp | — → — | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 24.8 | 26 → 26 | 13 → 13 |
+| 28 | contact-fill → metal1 | cmp | — → — | 0 → 0 | 0 → 0 | 0 → 0 | 0 | 25.64 | 37 → 37 | — → — |
+| 29 | metal1 → metal2 | cmp | — → — | 0 → 0 | 0 → 0 | 0 → 0 | 0 | 27.65 | 37 → 37 | — → — |
+| 30 | metal2 → passivate | cmp → depo | ×1.46 → ×2.94 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 5.24 | 123 → 146 | 53 → 71 |
+| 31 | passivate → inspect | depo → inspect | ×1.52 → ×1.46 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 22.95 | 105 → 105 | 28 → 27 |
+| 32 | inspect → probe | inspect → prober | ×2.33 → ×2.03 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 4.84 | 152 → 166 | 43 → 65 |
+| 33 | probe → dice | prober → dicing | ×1.45 → ×2.25 | 1 → 1 | 0 → 0 | 0 → 0 | 0 | 12.91 | 136 → 141 | 43 → 43 |
+| 34 | dice → attach | dicing → package | ×1.94 → ×1.31 | 1 → 1 | 0 → 0 | 3 → 0 | 0 | 22.15 | 103 → 105 | 20 → 20 |
+| 35 | attach → bond | package | ×1.47 → ×1.44 | 0 → 0 | 0 → 0 | 0 → 0 | 0 | 23.99 | 48 → 48 | — → — |
+| 36 | bond → final | package → testbench | ×3.61 → ×3.65 | 0 → 0 | 0 → 0 | 0 → 0 | 0 | 13.91 | 117 → 131 | 26 → 33 |
+
+No move has a blank frame (round three: three, all between the dicing saw and the die bonder)
+or a frame under 4 levels; the lowest are the ones round three reviewed as well — a machine's
+side panel passing the lens between the die map and the pad oxide (5.1) and between inspection
+and wafer sort (4.8) — and the close-up of your die on the freshly polished wafer at the
+polisher (5.2). One learner wafer on screen at most; no wafer steps. The one-frame changes of
+×3 and more, each looked at frame by frame: *develop → ADI* (×3.1, 7.0 levels): the CD-SEM's
+roof is cut away in a single frame as its reveal begins — the cut is a plane lowering through a
+flat roof (the frames around it change by about 2 levels); *wire bond → final test* (×3.65, as
+in round three): a change of under one level after a still frame, measured against the floor
+for still pictures. The moves out of the layers are longer than round three's (to the
+machine's own framing first, then the new machine's establishing beat: anneal → gate stack 123
+→ 204 frames).
+
 
 ## Before and after
 
@@ -585,9 +670,10 @@ continuity evidence, not frame-rate evidence):
   — the start of the exposure with the page: the stages exchange, the step-and-scan meander
   runs, and the magnified inset shows the water under the lens with the wafer moving beneath.
 * [`r4-03-arrive-at-etch-open-and-etch.mp4`](recordings/round4/r4-03-arrive-at-etch-open-and-etch.mp4)
-  — arriving at the etch cluster: the closed machine held for a moment, then opened on the way
-  in (the housing, the chamber's wedge, the transfer chamber's lid); the hand-off through the
-  slit valve and the etch.
+  — from the CD-SEM to the etch cluster across the aisle: the camera pans round (recorded after
+  that fix), holds for a moment on the closed machine, then opens it on the way in (the
+  housing, the chamber's wedge, the transfer chamber's lid); the hand-off through the slit
+  valve and the etch.
 * [`r4-04-polisher-wet-pad.mp4`](recordings/round4/r4-04-polisher-wet-pad.mp4) — the end of
   the tungsten polish (the pad glossy under the slurry, the slurry banked against the retaining
   ring), then the lesson's own move into the layers.
@@ -603,6 +689,8 @@ continuity evidence, not frame-rate evidence):
 * [`r4-09-sti-etch-to-fill.mp4`](recordings/round4/r4-09-sti-etch-to-fill.mp4) — out of the
   etch cluster from your die in the load lock to the polisher: back out, travel, the closed
   polisher established from the aisle, straight in.
+
+<!--RT-CLIPS-->
 
 ## Real-time playback (software rendering)
 
@@ -755,7 +843,15 @@ only this document's results — on the machine described under *Method*:
 | `node scripts/programs.mjs <base> --step adi` and `--step transfer`, both builds | shader programs during moves, same section |
 | `node scripts/stills.mjs <base> scripts/round4/stills-desktop.json <dir>` (and `stills-phone.json`), `scripts/frames.mjs`, `node scripts/record.mjs scripts/recordings/r4-0N-….json` | the stills, frame sequences and clips in `docs/recordings/round4/` |
 
-<!--E2E-HISTORY-->
+The runs before the last one: the first full run, on the build before the player's fixes
+(`cd29ffc`), was stopped after the first 30 desktop tests, 29 passed and one failed — round
+three's seek check, which found the one-frame lag after a seek (fixed, see *Continuity*).
+Targeted runs of the Watch tests on the next build then found `watch.spec.ts`'s speed check
+failing: the film now waits for a loading machine (the test was adapted, below); investigating
+it found the two gaps in the player's hold (fixed, with a new test). A second full run, on
+`0e35bcf`, was stopped after two tests when the review of the recordings found the CD-SEM →
+etch floor frame (fixed; the whole course was then walked move by move, see *Continuity*).
+<!--E2E-BASELINE-->
 
 **New tests this round**, and where each requirement of the brief is covered (the round-three
 tests named here still pass on this round's build):
@@ -765,7 +861,7 @@ tests named here still pass on this round's build):
 | machines closed from outside, opened deliberately; silhouette and anchors consistent | `e2e/round4.spec.ts` "a machine is shown closed from outside, opens as the camera moves in, and its chamber opens after it" (frame by frame: ≥ 8 frames held on the closed machine, the opening never decreasing, the chamber cut only once the housing is open); "each machine of the lithography loop keeps its parts and your wafer inside its housing's outline" (track, scanner, etch, deposition, polisher); `round4.test.ts` section cuts (a closed wedge cuts nothing, an open one exactly its sector, for plain, turned and mirrored chambers; the lid wipes from the front) |
 | continuous wafer and moving parts, prime → coat → soft bake and align → expose | `round3.test.ts` "track: one wafer, carried" (five tests) and "scanner: the stages move, they never jump", on this round's module positions; `e2e/continuity.spec.ts` "the track carries the wafer from module to module (no teleporting)"; `round4.test.ts` the lithography cell (process order west to east, carrier and interface ends, every carry ≤ 0.7 m, the scanner east of the track, the immersion gap) |
 | exterior ↔ interior and machine ↔ wafer ↔ die ↔ layers, both ways, with interruption | `round4.spec.ts` the closed-first test; `round4.test.ts` "into the layers and back, at a machine whose wafer is not in view" (reveal in place; back along the line of sight); `continuity.spec.ts` "reversing the cross-section fade at any point never jumps; the latest request wins", "rising out of the layers to leave for another machine, your die fades in (no pop)" |
-| the camera through free space | `round4.spec.ts` "the camera travels through free space and never shows a blank frame" (STI etch → STI fill, dice → attach, CD-SEM → gate etch: the camera's path ray-cast between frames, every frame's luminance spread > 6, no one-frame jump); `round4.test.ts` "camera routes" and "the room" (back out along the line of sight; a direct move in; between machines facing each other across the aisle, a pan that never looks steeper than its two framings; establishing shots over the aisle and under the ceiling with a lens that keeps the framing; a narrow screen's fit inside the room; the etch → polisher move under the ceiling throughout); `scripts/probe.mjs --cases transitions` (every lesson-to-lesson move of the course, frame by frame) |
+| the camera through free space | `round4.spec.ts` "the camera travels through free space and never shows a blank frame" (STI etch → STI fill, dice → attach, CD-SEM → gate etch: the camera's path ray-cast between frames — except across a dissolve, where there is no path — every frame's luminance spread > 6, no one-frame jump; and the four moves out of the layers from your die — metal 2 → passivation, anneal → gate stack, develop → ADI, contact print → contact etch — with a spread above 1.5, the probe's count of blank frames, since a close-up of a pale wafer is legitimately flat); `round4.test.ts` "camera routes" and "the room" (back out along the line of sight; a direct move in; between machines facing each other across the aisle, a pan that never looks steeper than its two framings; establishing shots over the aisle and under the ceiling with a lens that keeps the framing; a narrow screen's fit inside the room; the etch → polisher move under the ceiling throughout); `scripts/probe.mjs --cases transitions` (every lesson-to-lesson move of the course, frame by frame) |
 | readiness, failure, rapid navigation | `e2e/loading.spec.ts` (four tests: a late machine, changing your mind while one loads, a machine that fails, the first picture only when ready); `e2e/modes.spec.ts` "rapid navigation: the last request wins and no stale camera move completes"; `round4.spec.ts` "the last lesson loads in a fresh browser without the page freezing" |
 | Watch: pause, seek, narration during a slow load | `round4.spec.ts` "Watch: the narration waits for a machine that is still loading, and carries on where it stopped" (harness clock) and "Watch, with its narration (real time): Play or a seek during a hold does not start the narration; a background tab plays it on" (the track's module held at the network: the narration silent and the clock still through the wait, *Play* and a seek; playing on in a background tab; waiting again on return; running once the track is in); `e2e/film-continuity.spec.ts` (seek = play, chapter jumps); `e2e/watch.spec.ts` (the narration clock through pause, seek, speed, mute, a background tab) |
 | reduced motion | `round4.spec.ts` "reduced motion: a machine and its chamber open at once, without a moving cut"; `continuity.spec.ts` "reduced motion: moves become still cross-fades, and still nothing jumps" |
@@ -775,7 +871,13 @@ tests named here still pass on this round's build):
 **Run against round three's build**, the new browser tests fail where round three had the
 problem: the closed-first test finds no frame held on the closed machine; the STI move crosses
 the ceiling at frame 62; the dice → attach move has a frame with a luminance spread of 5.9; the
-Watch test finds the film clock running on by 2.4 s while the picture waits.
+Watch test finds the film clock running on by 2.4 s while the picture waits. The tests added
+with the fixes made at the end of the round fail on this round's own builds from before them:
+the CD-SEM → gate etch case at frame 18 (a spread of 0.0) on the build before the pan
+(`0e35bcf`); the real-time Watch test at "Play during the hold: no narration while the picture
+waits" on the build before the player's fixes (`cd29ffc`), and at "no hold in a background
+tab" on that build with only the first of them applied; round three's seek test ("a seek shows
+exactly the frame that playing would") at a difference of 17.2 on `cd29ffc`.
 
 No assertion was loosened and no test skips a failure; the new frame-by-frame tests run once, at
 the desktop size (they step frames and read pixels), and their waits are conditions (the camera
@@ -827,6 +929,18 @@ exactly what it did.
   needs the most), and a narrow screen widens it further rather than taking the camera out
   through the ceiling; expect more perspective at the edges of those pictures than in round
   three's.
+
+**Still open.**
+
+* **After a seek into a machine that has not loaded, the narration starts for a frame or two**
+  before it waits for the machine (the stage's verdict reaches the player a frame or two
+  later): up to 0.6 s of film on this software renderer; at 60 frames per second it would be
+  about 33 ms (not measured).
+* **Switching between a lesson and the explorer changes the page's layout, and the canvas is
+  blank for the frame in between** in the frame-stepped recordings (`r4-05`, frame 16; round
+  two's explorer recording shows the same frame, so it predates this round): the canvas is
+  resized, which clears it, before the next frame is drawn. Whether a browser running in real
+  time shows that frame was not checked.
 
 **Not verified in this session.**
 
