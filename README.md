@@ -50,8 +50,9 @@ npm run serve          # dist/ at http://127.0.0.1:8888, routed as Netlify route
 | `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm` and `poster.jpg` from the built site |
 | `npm run package` | `release/fab-one-site.zip`: the contents of `dist/`, with `index.html` at the top level |
 
-Each simulation can still be developed on its own in its folder (`npm run dev` there): see
-its README.
+The browser tests use Playwright's Chromium with software WebGL, so they run without a GPU;
+if it is not installed yet, run `npx playwright install chromium` once. Each simulation can
+still be developed on its own in its folder (`npm run dev` there): see its README.
 
 ## How the routes work
 

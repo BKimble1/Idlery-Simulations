@@ -149,7 +149,7 @@ ffmpeg([
 ffmpeg(['-i', join(work, segs[0].name, '00000.png'), '-c:v', 'libwebp', '-quality', '82', join(media, 'poster.webp')]);
 if (spec.og) {
   const frame = join(work, spec.og.segment, `${String(spec.og.frame).padStart(5, '0')}.png`);
-  ffmpeg(['-i', frame, '-vf', 'scale=1200:-2:flags=lanczos,crop=1200:630', '-q:v', '4', join(root, 'site', 'public', 'og.jpg')]);
+  ffmpeg(['-i', frame, '-vf', 'scale=1200:-2:flags=lanczos,crop=1200:630:0:0', '-q:v', '4', join(root, 'site', 'public', 'og.jpg')]);
 }
 const kb = (f) => `${Math.round(statSync(f).size / 1024)} KB`;
 console.log(`\n${length.toFixed(1)} s: preview.mp4 ${kb(video)}, preview.webm ${kb(webm)}, poster.webp ${kb(join(media, 'poster.webp'))}`);
