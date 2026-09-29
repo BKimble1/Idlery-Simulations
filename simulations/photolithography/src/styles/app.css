@@ -2642,6 +2642,25 @@ a {
   }
 }
 
+/* Narrow phones (360 px and less): the lesson's place in the header drops the chapter number,
+   then the step count (the panel below says both), so it never runs under the header's buttons. */
+@media (max-width: 380px) {
+  .wordmark {
+    font-size: 13.5px;
+  }
+  .hbtn {
+    padding: 0 7px;
+  }
+  .topbar--learn .place__ch {
+    display: none;
+  }
+}
+@media (max-width: 340px) {
+  .topbar--learn .place__count {
+    display: none;
+  }
+}
+
 /* Short screens (landscape phones, zoomed-in desktops): a denser introduction. */
 @media (max-height: 520px) {
   .home-intro {
