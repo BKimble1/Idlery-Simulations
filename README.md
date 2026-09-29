@@ -46,8 +46,8 @@ npm run serve          # dist/ at http://127.0.0.1:8888, routed as Netlify route
 | `npm test` | every simulation's unit tests |
 | `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and Photolithography at its route |
 | `npm run e2e:photolithography` | Photolithography's own browser suite at `/photolithography` on the built site (long: see its README) |
-| `npm run typecheck` | the homepage's and the scripts' types |
-| `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm` and `poster.jpg` from the built site |
+| `npm run typecheck` | types of the homepage, its build config and the site's tests |
+| `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm` and `poster.webp` (and `site/public/og.jpg`) from the built site |
 | `npm run package` | `release/fab-one-site.zip`: the contents of `dist/`, with `index.html` at the top level |
 
 The browser tests use Playwright's Chromium with software WebGL, so they run without a GPU;
