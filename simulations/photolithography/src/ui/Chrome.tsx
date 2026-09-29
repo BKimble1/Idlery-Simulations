@@ -13,8 +13,24 @@ import { CHAPTERS, FLOW } from '../sim/flow';
 import { useApp } from '../state/store';
 import { markFilmGesture } from '../watch/film';
 
+/** The FAB / ONE homepage, when this simulation is part of the site (see src/env.d.ts). */
+const SITE_HOME = import.meta.env.VITE_FABONE_HOME;
+
+/**
+ * Inside FAB / ONE the wordmark is the way back to the site's homepage, with a chevron that
+ * says so. Built on its own, it brings the viewer to this simulation's home.
+ */
 export function Wordmark() {
   const navigate = useApp((s) => s.navigate);
+  if (SITE_HOME)
+    return (
+      <a className="wordmark wordmark--site" href={SITE_HOME} aria-label="Back to FAB / ONE" title="Back to FAB / ONE">
+        <BackIcon />
+        <span className="wordmark__name">
+          FAB<span className="slash">/</span>ONE
+        </span>
+      </a>
+    );
   return (
     <button className="wordmark" onClick={() => navigate({ mode: 'home' })} aria-label="FAB / ONE, home">
       FAB<span className="slash">/</span>ONE

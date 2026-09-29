@@ -1,8 +1,12 @@
-# FAB / ONE
+# Photolithography
 
-**Build a chip, layer by layer.** FAB / ONE is an interactive 3D simulation you run in the
-browser. It follows one silicon wafer through a simplified CMOS fab until it becomes a
-working two-transistor inverter: input low gives output high, input high gives output low.
+**Build a chip, layer by layer.** Photolithography is an interactive 3D simulation you run in
+the browser, and the first simulation on [FAB / ONE](https://simulations.idlery.com), Idlery's
+simulations site, where it lives at
+[`/photolithography`](https://simulations.idlery.com/photolithography) (see
+[Inside FAB / ONE](#inside-fab--one) and the [site's README](../../README.md)). It follows one
+silicon wafer through a simplified CMOS fab until it becomes a working two-transistor
+inverter: input low gives output high, input high gives output low.
 
 There are three ways in, all on the same fab and the same process model:
 
@@ -56,6 +60,26 @@ To serve the production build instead (needed for *Save for offline*):
 npm run build
 npm run preview        # http://127.0.0.1:4173
 ```
+
+## Inside FAB / ONE
+
+The site's build (`npm run build` in the repository's root) builds this project with
+`--base /photolithography/` and `VITE_FABONE_HOME=/`, so that:
+
+* everything it loads (scripts, styles, fonts, workers, the narration, the offline file list)
+  comes from under `/photolithography/`, and its addresses are `/photolithography?step=expose`,
+  `/photolithography?watch&t=245` and so on;
+* the wordmark becomes **Back to FAB / ONE**, a link to the homepage (on its own it still
+  brings you to this simulation's home);
+* *Save for offline* keeps to the route: its caches are named `fabone-offline-photolithography-…`,
+  its completion marker is `/photolithography/__complete__`, its service worker is registered
+  for `/photolithography` itself (the site's `_headers` send `Service-Worker-Allowed` for that),
+  it answers only this simulation's pages, and *Remove* unregisters only that worker.
+
+Built or developed on its own (below), it behaves exactly as before, at the server's root.
+The e2e suite runs either way: on its own with `npm run e2e`, and at the route with the root's
+`npm run e2e:photolithography` (which sets `SITE_URL` and `SIM_PATH`; see
+[`e2e/helpers.ts`](e2e/helpers.ts)).
 
 ## Scripts
 
@@ -144,7 +168,8 @@ also run on machines without a GPU. If Playwright's browser isn't installed yet,
 
 ### Addresses
 
-The URL always says where you are, so Back/Forward, refresh and shared links work:
+The URL always says where you are, so Back/Forward, refresh and shared links work (inside
+FAB / ONE the same addresses follow `/photolithography`, as in `/photolithography?step=expose`):
 
 | address | opens |
 |---|---|

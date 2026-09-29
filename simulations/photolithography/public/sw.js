@@ -4,9 +4,18 @@
  * narration into a versioned cache, verifies every file's checksum, and only then marks the
  * cache complete. This worker serves from the newest COMPLETE cache, and only when the network
  * fails (the narration, which never changes within a version, is served from the cache first).
+ *
+ * The worker belongs to the simulation it was built with. At a domain's root it serves the
+ * whole origin; inside FAB / ONE (/photolithography/sw.js, registered for the route
+ * /photolithography) its caches carry the route's name and it leaves every other page alone.
  */
-const PREFIX = 'fabone-offline-';
-const MARKER = '__complete__';
+const BASE = new URL('./', self.location).pathname; // '/' or '/photolithography/'
+const APP_PATH = BASE.slice(0, -1); // '' or '/photolithography'
+const PREFIX = 'fabone-offline-' + (APP_PATH ? APP_PATH.slice(1).replace(/\//g, '-') + '-' : '');
+const MARKER = BASE + '__complete__'; // the same absolute address the page writes
+const INDEX = BASE + 'index.html';
+/** A page of this simulation: its route, with or without the trailing slash, and below it. */
+const ours = (path) => !APP_PATH || path === APP_PATH || path.startsWith(BASE);
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
@@ -49,6 +58,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  // another page of the site (a simulation whose route begins with the same letters)
+  if (req.mode === 'navigate' && !ours(url.pathname)) return;
   e.respondWith(
     (async () => {
       const cache = await completeCache();
@@ -63,7 +74,7 @@ self.addEventListener('fetch', (e) => {
         const hit = await cache.match(url.pathname);
         if (hit) return ranged(req, hit);
         if (req.mode === 'navigate') {
-          const index = await cache.match(new URL('index.html', self.registration.scope).pathname);
+          const index = await cache.match(INDEX);
           if (index) return index;
         }
         throw err;

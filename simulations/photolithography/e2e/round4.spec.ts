@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { machineOfStep } from '../src/content/machines';
 import { STEPS } from '../src/content/steps';
 import { CHAPTERS, chapterSteps, FLOW } from '../src/sim/flow';
-import { advance, freshStart, overlaps, press, runState, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
+import { advance, at, freshStart, overlaps, press, runState, sampleFrame, settle, stageInfo, waitForStage, watchErrors, worstJump, type FrameSample } from './helpers';
 
 /**
  * Round four: machines are seen closed first and opened deliberately (the housing as the camera
@@ -321,7 +321,7 @@ test('Watch: the narration waits for a machine that is still loading, and carrie
   onlyDesktop(info.project.name);
   test.setTimeout(600_000);
   const errors = watchErrors(page);
-  await page.goto('/');
+  await page.goto(at('/'));
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -332,7 +332,7 @@ test('Watch: the narration waits for a machine that is still loading, and carrie
     await released;
     await r.continue();
   });
-  await page.goto('/?watch&virt=1');
+  await page.goto(at('/?watch&virt=1'));
   await waitForStage(page);
   await expect(page.getByRole('group', { name: 'Film controls' })).toBeVisible();
   // just before the film moves to the track
@@ -394,7 +394,7 @@ test('Watch, with its narration (real time): Play or a seek during a hold does n
   onlyDesktop(info.project.name);
   test.setTimeout(600_000);
   const errors = watchErrors(page);
-  await page.goto('/');
+  await page.goto(at('/'));
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -405,7 +405,7 @@ test('Watch, with its narration (real time): Play or a seek during a hold does n
     await released;
     await r.continue();
   });
-  await page.goto('/?hooks=1');
+  await page.goto(at('/?hooks=1'));
   await page.getByRole('button', { name: 'Watch the film' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as RealW).__fabFilm.useFilm.getState().status), { timeout: 60_000 }).toBe('playing');
   const state = () =>
@@ -527,7 +527,7 @@ test('the last lesson loads in a fresh browser without the page freezing', async
   // renderer waiting forever on a fallback-font lookup in about half of the fresh loads of this
   // lesson (every test above reuses a browser that has loaded a page before, so none of them
   // meets it). Four fresh browsers, in a process of their own: each page must answer.
-  const url = `${info.project.use.baseURL}/?step=final&virt=1`;
+  const url = `${info.project.use.baseURL}${at('/?step=final&virt=1')}`;
   const args = JSON.stringify(info.project.use.launchOptions?.args ?? []);
   const out = execFileSync(process.execPath, ['e2e/fresh-load.mjs', url, '4', 'Flip the input', args], { timeout: 240_000 }).toString();
   const results = JSON.parse(out.trim().split('\n').pop()!) as { answered: boolean; shown: boolean }[];

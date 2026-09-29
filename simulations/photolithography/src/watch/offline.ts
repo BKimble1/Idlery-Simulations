@@ -10,9 +10,21 @@
 import { create } from 'zustand';
 import { FILM_BASE, FILM_VERSION, loadManifest } from './film';
 
-const PREFIX = 'fabone-offline-';
-const MARKER = '__complete__';
 const BASE = import.meta.env.BASE_URL;
+/**
+ * Where this simulation lives: '' at a domain's root, its route inside FAB / ONE
+ * ('/photolithography'). The saved package, its caches and its service worker belong to that
+ * path, so saving or removing it never touches another simulation on the same site. The
+ * names are the ones public/sw.js derives from its own address.
+ */
+const APP_PATH = BASE.replace(/\/$/, '');
+const PREFIX = 'fabone-offline-' + (APP_PATH ? APP_PATH.slice(1).replace(/\//g, '-') + '-' : '');
+/**
+ * The entry that marks a package complete. Its address is absolute: a relative one resolves
+ * against the page, and /photolithography (no trailing slash) would put it at the domain's root,
+ * where the worker (which resolves it against /photolithography/sw.js) would never find it.
+ */
+const MARKER = BASE + '__complete__';
 
 export type OfflinePhase = 'checking' | 'unavailable' | 'none' | 'downloading' | 'ready' | 'outdated' | 'error';
 
@@ -58,6 +70,30 @@ async function packageList(): Promise<{ name: string; files: PackageFile[] }> {
   }
   return { name: `${PREFIX}${app.build}-${FILM_VERSION}`, files };
 }
+
+/**
+ * Start the offline worker for this simulation's pages. Inside FAB / ONE the page's address has
+ * no trailing slash (/photolithography), which is outside the default scope of a worker at
+ * /photolithography/sw.js; the site's _headers allow the route itself as the scope. A server
+ * that does not still gets a worker, for the addresses under /photolithography/.
+ */
+async function registerWorker(): Promise<void> {
+  if (APP_PATH) {
+    try {
+      await navigator.serviceWorker.register(abs('sw.js'), { scope: APP_PATH });
+      return;
+    } catch {
+      /* no Service-Worker-Allowed header: fall back to the default scope */
+    }
+  }
+  await navigator.serviceWorker.register(abs('sw.js'));
+}
+
+/** A service worker registered by this simulation (by its scope). */
+const ownWorker = (r: ServiceWorkerRegistration) => {
+  const p = new URL(r.scope).pathname;
+  return !APP_PATH || p === APP_PATH || p.startsWith(APP_PATH + '/');
+};
 
 function supported(): string | null {
   if (typeof window === 'undefined' || !('caches' in window) || !('serviceWorker' in navigator)) return 'This browser cannot save sites for offline use.';
@@ -137,7 +173,7 @@ export async function saveOffline(): Promise<void> {
     await cache.put(MARKER, new Response(JSON.stringify({ bytes: total, at: new Date().toISOString() }), { headers: { 'Content-Type': 'application/json' } }));
     // Only now retire older packages, and start serving this one.
     for (const k of await caches.keys()) if (k.startsWith(PREFIX) && k !== name) await caches.delete(k);
-    await navigator.serviceWorker.register(abs('sw.js'));
+    await registerWorker();
     useOffline.setState({ phase: 'ready', savedBytes: total, doneBytes: total });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -152,6 +188,6 @@ export async function saveOffline(): Promise<void> {
 export async function removeOffline(): Promise<void> {
   for (const k of await caches.keys()) if (k.startsWith(PREFIX)) await caches.delete(k);
   const regs = (await navigator.serviceWorker?.getRegistrations?.()) ?? [];
-  await Promise.all(regs.map((r) => r.unregister()));
+  await Promise.all(regs.filter(ownWorker).map((r) => r.unregister()));
   useOffline.setState({ phase: 'none', savedBytes: 0, doneBytes: 0, totalBytes: 0, message: null });
 }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { STEPS } from '../src/content/steps';
-import { freshStart, press, watchErrors } from './helpers';
+import { at, freshStart, press, watchErrors } from './helpers';
 
 async function setSlider(page: Page, name: string | RegExp, keys: string[]) {
   const s = page.getByRole('slider', { name });
@@ -16,7 +16,7 @@ test('overlay beyond the margin fails the final test; re-aligning restores it', 
   await expect(page.getByText('Beyond the margin')).toBeVisible();
 
   // Choices persist, so jumping to the last step tests the wafer built with this offset.
-  await page.goto('/?step=final');
+  await page.goto(at('/?step=final'));
   await expect(page.getByText('Your die: fail')).toBeVisible();
   await expect(page.getByText(/Output (shorted|floating)/)).toBeVisible();
 
@@ -51,7 +51,7 @@ test('far under-exposure fails inspection; rework and nominal dose recover', asy
 test('skipping the clean leaves particles that cost dies at wafer sort', async ({ page, hasTouch }) => {
   const errors = watchErrors(page);
   const yieldAt = async () => {
-    await page.goto('/?step=probe');
+    await page.goto(at('/?step=probe'));
     const chip = page.getByText(/Yield [\d.]+% \(toy model\)/);
     await expect(chip).toBeVisible({ timeout: 60_000 });
     return Number((await chip.textContent())!.match(/([\d.]+)%/)![1]);
@@ -59,7 +59,7 @@ test('skipping the clean leaves particles that cost dies at wafer sort', async (
   await freshStart(page, '/?step=clean');
   const clean = await yieldAt();
 
-  await page.goto('/?step=clean');
+  await page.goto(at('/?step=clean'));
   await press(page.getByRole('radio', { name: 'Skip it' }), hasTouch);
   await expect(page.getByText(/particles left/)).toBeVisible();
   const dirty = await yieldAt();

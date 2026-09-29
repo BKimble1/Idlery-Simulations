@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { advance, freshStart, press, watchErrors } from './helpers';
+import { advance, at, freshStart, press, watchErrors } from './helpers';
 
 type FilmWin = {
   __fabFilm: {
@@ -69,7 +69,7 @@ test('the film plays through to the working inverter without touching the learni
   await freshStart(page, '/?step=expose&dose=1');
   const saved = await page.evaluate(() => localStorage.getItem('fab-one:v2'));
   expect(saved).toBeTruthy();
-  await page.goto('/?watch&virt=1');
+  await page.goto(at('/?watch&virt=1'));
   await expect(page.getByRole('group', { name: 'Film controls' })).toBeVisible();
   // from shortly before the final test to the end, on the harness clock (captions only)
   await page.evaluate(() => {

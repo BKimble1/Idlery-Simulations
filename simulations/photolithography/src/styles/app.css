@@ -119,6 +119,26 @@ a {
   color: var(--accent);
   margin: 0 0.18em;
 }
+/* Inside FAB / ONE the wordmark leads back to the site's homepage; a quiet chevron says so. */
+.wordmark--site {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -5px;
+  padding: 4px 4px 4px 0;
+}
+.wordmark--site svg {
+  flex: none;
+  color: var(--ink-3);
+  transition:
+    transform 0.18s ease,
+    color 0.18s ease;
+}
+.wordmark--site:hover svg,
+.wordmark--site:focus-visible svg {
+  color: var(--ink);
+  transform: translateX(-2px);
+}
 
 /* ───────────────────────── app frame & header ───────────────────────── */
 

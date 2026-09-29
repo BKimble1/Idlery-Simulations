@@ -1,5 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+/**
+ * Where the app is: the server's root on its own, its route inside FAB / ONE (SIM_PATH, e.g.
+ * /photolithography, set by the site's `npm run e2e:photolithography`). at('/?step=coat') is a
+ * lesson's address either way.
+ */
+export const APP_PATH = (process.env.SIM_PATH ?? '').replace(/\/+$/, '');
+export const at = (path: string): string => (APP_PATH ? APP_PATH + path.replace(/^\/(?=\?|$)/, '') : path);
+
 /** Collect uncaught errors and console errors for the whole test. */
 export function watchErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -17,12 +25,12 @@ export async function press(target: Locator, touch: boolean): Promise<void> {
 }
 
 export async function freshStart(page: Page, path = '/'): Promise<void> {
-  await page.goto('/');
+  await page.goto(at('/'));
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
-  await page.goto(path);
+  await page.goto(at(path));
 }
 
 /** Wait until the WebGL canvas has been created and drawn at least once. */

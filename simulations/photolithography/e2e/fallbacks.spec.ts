@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { STEPS } from '../src/content/steps';
-import { advance, freshStart, press, runState, stageInfo, waitForStage, watchErrors } from './helpers';
+import { advance, at, freshStart, press, runState, stageInfo, waitForStage, watchErrors } from './helpers';
 
 test('reduced motion: steps still play, in still compositions; captions follow the process', async ({ page, hasTouch }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -51,12 +51,12 @@ test('without WebGL: the lesson, its captions, the machine list and the film sti
   await press(page.getByRole('button', { name: 'Continue', exact: true }), hasTouch);
   await expect(page.locator('h1.step-title')).toHaveText(STEPS.adi.title);
 
-  await page.goto('/?explore&flat=1');
+  await page.goto(at('/?explore&flat=1'));
   await press(page.getByRole('button', { name: 'Equipment list' }), hasTouch);
   await press(page.getByRole('button', { name: /^CD-SEM/ }), hasTouch);
   await expect(page.getByRole('heading', { name: 'CD-SEM' })).toBeVisible();
 
-  await page.goto('/?watch&flat=1&hooks=1');
+  await page.goto(at('/?watch&flat=1&hooks=1'));
   await expect(page.getByRole('group', { name: 'Film controls' })).toBeVisible();
   expect(errors).toEqual([]);
 });

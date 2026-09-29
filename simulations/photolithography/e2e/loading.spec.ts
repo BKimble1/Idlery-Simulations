@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { advance, sampleFrame, sampleFrames, settle, waitForStage, watchErrors, worstJump } from './helpers';
+import { advance, at, sampleFrame, sampleFrames, settle, waitForStage, watchErrors, worstJump } from './helpers';
 
 /**
  * Loading (round three): the camera never flies into a machine that is not there. It waits
@@ -29,7 +29,7 @@ const TRACK_MODULE = /\/(assets\/Track-[^/]*\.js|src\/three\/tools\/Track\.tsx)(
  * function is called (or refused outright).
  */
 async function openHeld(page: Page, path: string, refuse = false): Promise<() => void> {
-  await page.goto('/');
+  await page.goto(at('/'));
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
@@ -41,7 +41,7 @@ async function openHeld(page: Page, path: string, refuse = false): Promise<() =>
     await released;
     await r.continue();
   });
-  await page.goto(path);
+  await page.goto(at(path));
   return release;
 }
 

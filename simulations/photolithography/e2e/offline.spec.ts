@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { freshStart, watchErrors } from './helpers';
+import { at, freshStart, watchErrors } from './helpers';
 
 async function openSave(page: import('@playwright/test').Page) {
   await page.getByRole('button', { name: /Save for offline|Saved for offline/ }).click();
@@ -37,14 +37,14 @@ test.describe('offline film', () => {
     await page.evaluate(() => navigator.serviceWorker.ready);
 
     await context.setOffline(true);
-    await page.goto('/?watch&hooks=1');
+    await page.goto(at('/?watch&hooks=1'));
     await expect(page.getByRole('group', { name: 'Film controls' })).toBeVisible({ timeout: 60_000 });
     await page.getByRole('button', { name: 'Play the film' }).click();
     await expect
       .poll(async () => page.evaluate(() => (window as unknown as { __fabFilm: { useFilm: { getState: () => { status: string; audioOk: boolean } } } }).__fabFilm.useFilm.getState()), { timeout: 60_000 })
       .toMatchObject({ status: 'playing', audioOk: true });
     // the cross-section is built in a worker, whose script is part of the saved build
-    await page.goto('/?step=wells&hooks=1');
+    await page.goto(at('/?step=wells&hooks=1'));
     await expect
       .poll(async () => page.evaluate(() => (window as unknown as { __fab?: { deviceMeshes: { stats: { worker: number; main: number } } } }).__fab?.deviceMeshes.stats ?? null), { timeout: 120_000 })
       .toMatchObject({ worker: expect.any(Number) });

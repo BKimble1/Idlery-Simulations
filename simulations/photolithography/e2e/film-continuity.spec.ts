@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { advance, sampleFrame, sampleFrames, watchErrors, worstJump, pictureChange } from './helpers';
+import { advance, at, sampleFrame, sampleFrames, watchErrors, worstJump, pictureChange } from './helpers';
 
 /**
  * Watch, frame by frame (round three): the silent moves between segments are planned once and
@@ -17,12 +17,12 @@ type FW = {
 };
 
 async function openFilm(page: Page, t: number) {
-  await page.goto('/');
+  await page.goto(at('/'));
   await page.evaluate(() => {
     localStorage.clear();
     sessionStorage.clear();
   });
-  await page.goto(`/?watch&t=${t}&virt=1`);
+  await page.goto(at(`/?watch&t=${t}&virt=1`));
   // the film's player and the stage's harness hooks (the canvas mounts its scene asynchronously)
   await page.waitForFunction(
     () => {
