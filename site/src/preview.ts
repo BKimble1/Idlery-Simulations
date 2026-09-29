@@ -21,8 +21,10 @@ export function initPreviews(): void {
     };
     const sync = () => {
       if (wanted && onScreen && !document.hidden)
-        video.play().catch(() => {
-          // the browser refused (a power-saving mode, say): the poster stays, with a play button
+        video.play().catch((e: unknown) => {
+          // the browser refused (a power-saving mode, say): the poster stays, with a play button;
+          // a play() cut short by a pause (scrolled straight past) changes nothing
+          if (e instanceof DOMException && e.name === 'AbortError') return;
           wanted = false;
           show();
         });

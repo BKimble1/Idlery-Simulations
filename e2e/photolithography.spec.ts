@@ -74,7 +74,7 @@ test('the back link sits clear of the header; it and browser Back and Forward mo
 
 test('on narrow phones the header keeps the back link, the lesson’s place and the buttons apart', async ({ browser }, info) => {
   test.skip(info.project.name !== 'phone', 'phone widths');
-  for (const width of [390, 360, 320]) {
+  for (const width of [430, 414, 412, 393, 390, 375, 360, 320]) {
     const ctx = await browser.newContext({ baseURL: ORIGIN, viewport: { width, height: 740 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
     const page = await ctx.newPage();
     for (const path of ['/photolithography', '/photolithography?step=coat', '/photolithography?explore=scanner', '/photolithography?watch']) {
