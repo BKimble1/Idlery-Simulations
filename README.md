@@ -114,17 +114,22 @@ The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONO
 
 1. `npm run build && npm run package` makes `release/fab-one-site.zip`. Unzip it: the folder
    you get has `index.html`, `404.html`, `_redirects`, `_headers`, `assets/` and
-   `photolithography/` at its top level.
-2. In Netlify, open the project's **Deploys** page and drag that folder onto the upload area
-   (for a new project: **Add new project → Deploy manually**, then drop the folder). The
-   deploy summary should list 1 redirect rule and 3 header rules.
-3. Custom domain: **Domain management → Add a domain**, enter `simulations.idlery.com`, and
-   confirm. Netlify then asks for a DNS record at the domain's provider.
-4. At IONOS: **Domains & SSL → idlery.com → DNS → Add record → CNAME**, host name
-   `simulations`, pointing to the project's Netlify address (`<project-name>.netlify.app`),
-   TTL 1 hour. Remove any other A, AAAA or CNAME record on `simulations` first.
-5. Back in Netlify, once the record is seen, the HTTPS certificate is issued automatically
-   (**Domain management → HTTPS**). *Save for offline* needs HTTPS.
+   `photolithography/` at its top level. Upload that folder, not a folder around it.
+2. In Netlify: for a new project, **Add new project → Deploy manually** and drop the folder;
+   to update an existing one, open its **Deploys** page and drop the folder onto the upload
+   area at the bottom. The deploy summary should report 1 redirect rule and 3 header rules.
+   Check `https://<project-name>.netlify.app/` and `/photolithography` (also refreshed).
+3. **Domain management → Add a domain → Add a domain you already own**, enter
+   `simulations.idlery.com`, **Verify**, then add it. Netlify shows it as waiting for DNS.
+4. At IONOS: **Domains & SSL**, the gear icon next to `idlery.com` → **DNS** →
+   **Add record → CNAME**. Host name `simulations`, points to `<project-name>.netlify.app`
+   (no `https://`), TTL 1 hour, **Save**. If `simulations` already has A, AAAA or CNAME
+   records (IONOS adds some when a subdomain is created under *Manage subdomains*), delete them
+   first: a CNAME cannot share its name with other records.
+5. Back in Netlify, once the record is seen (minutes, up to an hour or more), the Let's Encrypt
+   certificate is issued automatically (**Domain management → HTTPS**; **Verify DNS
+   configuration** there checks again). *Save for offline* needs HTTPS. If `idlery.com` has CAA
+   records, one of them must allow `letsencrypt.org`.
 
 ## Provenance
 
