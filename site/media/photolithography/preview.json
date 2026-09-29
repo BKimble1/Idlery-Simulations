@@ -1,0 +1,56 @@
+{
+  "about": "Shot list for the homepage preview (scripts/capture-preview.mjs). Each segment opens the simulation at a lesson, as a visitor would, and renders frames on its frame-stepped clock (?virt=1).",
+  "viewport": { "width": 1280, "height": 720, "dpr": 1 },
+  "fps": 30,
+  "crossfade": 0.4,
+  "crf": 26,
+  "crfVp9": 43,
+  "query": "virt=1&capture=1&quality=high",
+  "ready": "!!window.__fabAdvance && !!window.__fab && (window.__fab.stationBoxes?.size ?? 0) > 0",
+  "advance": "window.__fabAdvance(1)",
+  "segments": [
+    {
+      "name": "expose",
+      "about": "The scanner steps and scans the wafer under the lens, with the light path shown.",
+      "path": "?step=expose&lp=1",
+      "setup": [
+        { "advance": 150 },
+        { "eval": "window.__fabStores.useClock.setState({ progress: 0.3, playing: true, pendingPlay: false })" },
+        { "advance": 2 }
+      ],
+      "frames": 105
+    },
+    {
+      "name": "develop",
+      "about": "Developer floods the wafer; the camera goes down into the layers as the exposed resist dissolves.",
+      "path": "?step=develop",
+      "setup": [
+        { "advance": 150 },
+        { "eval": "window.__fabStores.useApp.getState().answer('develop', { choice: 0, correct: true }); window.__fabStores.useClock.setState({ progress: 0.3, playing: true, pendingPlay: false })" },
+        { "advance": 2 }
+      ],
+      "frames": 120
+    },
+    {
+      "name": "final",
+      "about": "The finished inverter under test: the input is switched to 1 and the output drops to 0.",
+      "path": "?step=final",
+      "setup": [
+        { "advance": 150 },
+        { "eval": "window.__fabStores.useClock.setState({ progress: 0.4, playing: true, pendingPlay: false })" },
+        { "advance": 2 }
+      ],
+      "during": [{ "frame": 30, "key": "1" }],
+      "frames": 90
+    },
+    {
+      "name": "explore",
+      "about": "Explore fab: the whole bay, then the camera travels to the scanner.",
+      "path": "?explore",
+      "setup": [{ "advance": 120 }],
+      "during": [{ "frame": 12, "eval": "window.__fabStores.useApp.getState().navigate({ mode: 'explore', machine: 'scanner' })" }],
+      "frames": 105
+    }
+  ],
+  "og": { "segment": "expose", "frame": 0 }
+}
