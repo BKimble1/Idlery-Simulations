@@ -15,7 +15,7 @@ Recorded by `node scripts/capture-preview.mjs rocket --keep` on 2026-09-30 10:22
 
 Ready: `{"hooks":"typeof window.__rocketAdvance === 'function' && typeof window.__rocketSeekMission === 'function' && !!window.__rocketPlayback?.player","until":"window.__rocketFrame?.location === 'flight' && window.__rocketDirector.ready.flight && !window.__rocketDirector.waiting && !window.__rocketDirector.dissolve","advancing":true,"interval":250,"timeout":600000}`
 
-Note: the clip was recorded from the import of `93d1f89`; the current import, `fc1d942` (see
+Note: the clip was recorded from the import of `93d1f89`; the current import, `e76d962` (see
 [SOURCE.json](../../../simulations/rocket/SOURCE.json)), differs from it only in the LEO
 mission's playback rate after T+477 s, one desktop layout rule of the "Mission paused" chip, a test and
 documents, none of which appear in the two recorded moments (T-4 s to T+2 s, T+155 s to

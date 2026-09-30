@@ -173,7 +173,7 @@ stand-alone card preview, which nothing in its `src/` or `index.html` loads) and
 `manifest.json` and the audio). It keeps `src/`, `public/` (textures, narration audio, brand),
 `index.html`, `package.json` and `package-lock.json`, the TypeScript and Vite configs, `e2e/`,
 `scripts/` and the documents. The current import is V2,
-`fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1` (2026-09-30, branch `claude/clever-pascal-y4v4d8`, which builds on
+`e76d962e1ecc9628cef69449db63e74d3a8c0f4d` (2026-09-30, branch `claude/clever-pascal-y4v4d8`, which builds on
 V1's `claude/kimble-rocket-engineering` at `ec43e1f`).
 
 **How it is built.** The rocket's own build script is `tsc -b && vite build`, so its entry in

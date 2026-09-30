@@ -2,11 +2,11 @@
   "about": "Where simulations/rocket/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
   "repository": "https://github.com/BKimble1/rocket-simulation",
   "branch": "claude/clever-pascal-y4v4d8",
-  "commit": "fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1",
-  "commitDate": "2026-09-30T11:10:27+00:00",
-  "commitSubject": "V2 proof clips, and side-by-sides with V1 at the same mission times",
-  "importedAt": "2026-09-30T11:16:09.532Z",
-  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1 --branch claude/clever-pascal-y4v4d8",
+  "commit": "e76d962e1ecc9628cef69449db63e74d3a8c0f4d",
+  "commitDate": "2026-09-30T12:05:46+00:00",
+  "commitSubject": "VALIDATION: the final end-to-end runs (rocket 29 of 29, FAB / ONE 42 passed)",
+  "importedAt": "2026-09-30T12:05:49.634Z",
+  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref e76d962e1ecc9628cef69449db63e74d3a8c0f4d --branch claude/clever-pascal-y4v4d8",
   "excluded": [
     {
       "pattern": "docs/recordings/",
