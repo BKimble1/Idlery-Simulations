@@ -4,9 +4,10 @@
  * in the site needs to change to add one: see "Adding a simulation" in README.md.
  *
  * A simulation is its own project in simulations/<slug>/ with its own dependencies. The site's
- * build (scripts/build.mjs) runs its `npm run build -- --base /<slug>/ --outDir …`, so it has to
- * build a static site with Vite (or accept those two options), use the base for every URL it
- * loads, and keep its own addresses under its route (query strings or /<slug>/… paths).
+ * build (scripts/build.mjs) builds it with Vite at its route (base /<slug>/, output
+ * dist/<slug>/), so it has to build a static site with Vite, use the base for every URL it
+ * loads, and keep its own addresses under its route (query strings or /<slug>/… paths). The
+ * build checks the page it wrote: everything it loads must come from /<slug>/.
  *
  * @typedef {object} Simulation
  * @property {string} slug        route and folder name: lowercase letters, digits and hyphens
@@ -22,6 +23,15 @@
  *   in site/ (made by scripts/capture-preview.mjs); `alt` says what the clip shows
  * @property {string} [serviceWorker] a service worker the simulation registers, relative to its
  *   route; the site allows it to control the route's own address (/<slug>, without the slash)
+ * @property {Record<string, string>} [env] environment variables for the simulation's build, in
+ *   addition to the ones every simulation gets (VITE_FABONE_HOME=/, FABONE_BASE=/<slug>/,
+ *   FABONE_OUT_DIR); for a project that names its settings differently
+ * @property {string[][]} [build] the commands that build it, run in order in its folder, with
+ *   {base} and {outDir} replaced; without this, `npm run build -- --base {base} --outDir {outDir}
+ *   --emptyOutDir`, which only works when the project's build script ends with `vite build`
+ * @property {Record<string, Record<string, string>>} [headers] response headers for files under
+ *   the route (paths relative to it, `*` at the end for a folder), written to _headers; built
+ *   files in /<slug>/assets/ are always cached for a year
  */
 
 /** The site: its name, who makes it, and where it is published (for links shared elsewhere). */
