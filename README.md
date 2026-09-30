@@ -8,7 +8,7 @@ you run in the browser, at its own address, with a card on the homepage.
 |---|---|---|
 | `/` | the FAB / ONE homepage | [`site/`](site/) |
 | [`/photolithography`](https://simulations.idlery.com/photolithography) | **01 Photolithography**: build a chip, layer by layer | [`simulations/photolithography/`](simulations/photolithography/), kept in this repository |
-| [`/rocket`](https://simulations.idlery.com/rocket) | **02 Rocket Engineering** (KIMBLE): from the launch pad to orbit | [`simulations/rocket/`](simulations/rocket/), imported from [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation) (see [its SOURCE.json](simulations/rocket/SOURCE.json)) |
+| [`/rocket`](https://simulations.idlery.com/rocket) | **02 Rocket Flight & Mission Simulation** (KIMBLE Rocket Engineering): rocket systems, launch sequences, staging, flight phases and mission operations | [`simulations/rocket/`](simulations/rocket/), imported from [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation) (see [its SOURCE.json](simulations/rocket/SOURCE.json)) |
 | [`/humanoid`](https://simulations.idlery.com/humanoid) | **03 Humanoid**: inside a machine built to move like us | [`simulations/humanoid/`](simulations/humanoid/), imported from [BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation) (see [its SOURCE.json](simulations/humanoid/SOURCE.json)) |
 | [`/automotive`](https://simulations.idlery.com/automotive) | **04 Automotive** (AUTOMOTIVE / ONE): how a car becomes motion | [`simulations/automotive/`](simulations/automotive/), imported from [BKimble1/automotive-simulation](https://github.com/BKimble1/automotive-simulation) (see [its SOURCE.json](simulations/automotive/SOURCE.json)) |
 
@@ -54,12 +54,12 @@ npm run serve          # dist/ at http://127.0.0.1:8888, routed as Netlify route
 | `npm run serve` | serves `dist/` like Netlify: forced rewrites, trailing slashes, headers, `404.html`, ranges |
 | `npm run dev` | the homepage alone with hot reload (the cards link to routes this server does not have) |
 | `npm test` | every simulation's unit tests |
-| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and Photolithography, Rocket Engineering and Humanoid at their routes |
+| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and Photolithography, the rocket simulation, Humanoid and Automotive at their routes |
 | `npm run e2e:photolithography` | Photolithography's own browser suite at `/photolithography` on the built site (long: see its README) |
 | `npm run e2e:humanoid` | Humanoid's own browser suite at `/humanoid` on the built site (desktop, laptop, tablet and phone) |
 | `npm run typecheck` | types of the homepage, its build config and the site's tests |
 | `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm`, `poster.webp` and `PROVENANCE.md` from the built site (Photolithography's also makes `site/public/og.jpg`, the homepage's link-preview image) |
-| `npm run import-simulation -- <slug> --repo <path or URL> --ref <ref>` | replaces `simulations/<slug>/` with that commit of its repository (see "Rocket Engineering" below) |
+| `npm run import-simulation -- <slug> --repo <path or URL> --ref <ref>` | replaces `simulations/<slug>/` with that commit of its repository (see "Rocket Flight & Mission Simulation" below) |
 | `npm run package` | `release/fab-one-site.zip`: the contents of `dist/`, with `index.html` at the top level (`-- --name <name>` for `release/<name>.zip`) |
 | `npm run verify-package -- <zip>` | unzips a package into a temporary folder, serves it like Netlify and checks its layout, routes, files, types, previews and headers |
 
@@ -153,9 +153,10 @@ rule, and `/automotive/assets/missing.js` and `/automotive/index.html` match non
 6. `npm run build`, `npm run e2e` (the tests read the config, so the new card and route are
    covered), then publish.
 
-## Rocket Engineering
+## Rocket Flight & Mission Simulation
 
-KIMBLE Rocket Engineering is developed in its own repository and imported here as one commit
+The card "Rocket Flight & Mission Simulation" opens KIMBLE Rocket Engineering at `/rocket`
+(the simulation keeps its own name inside). It is developed in its own repository and imported here as one commit
 (no history), with `scripts/import-simulation.mjs`. Nothing in `simulations/rocket/` is edited
 here: changes go to its repository, then it is imported again.
 
@@ -318,7 +319,7 @@ branch and date, and what was left out are in
 [`simulations/humanoid/SOURCE.json`](simulations/humanoid/SOURCE.json); its card preview's
 origin is in [`site/media/humanoid/PROVENANCE.md`](site/media/humanoid/PROVENANCE.md).
 
-Rocket Engineering is imported from
+The rocket simulation (KIMBLE Rocket Engineering) is imported from
 [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation): the commit, its
 branch and date, and what was left out are in
 [`simulations/rocket/SOURCE.json`](simulations/rocket/SOURCE.json); its card preview's

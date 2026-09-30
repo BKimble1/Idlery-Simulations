@@ -3,10 +3,11 @@ import simulations from '../simulations.config.mjs';
 import { overflow, watchErrors } from './helpers';
 
 /**
- * Rocket Engineering (KIMBLE) at its route, /rocket, and its card on the homepage: the page at
- * every address it is reached by, on a visit and a refresh, the way back to FAB / ONE, a clean
- * start, and the files it loads (their types, their caching, and a 404 for a file that is not
- * there). Its 3D scenes take a long time to draw with software WebGL, so these wait for the
+ * Rocket Flight & Mission Simulation (KIMBLE Rocket Engineering) at its route, /rocket, and its
+ * card on the homepage: the page at every address it is reached by, on a visit and a refresh, the
+ * way back to FAB / ONE, a clean start, a mission and the narrated film loading everything from
+ * the route, and the files it loads (their types, their caching, and a 404 for a file that is
+ * not there). Its 3D scenes take a long time to draw with software WebGL, so these wait for the
  * interface and a canvas on screen, not for the scene to be finished.
  */
 
@@ -22,13 +23,13 @@ async function shell(page: Page) {
 
 test.describe.configure({ timeout: 600_000 });
 
-test('the homepage lists Photolithography, then Rocket Engineering as 02, then Humanoid and Automotive, as matching rows', async ({ page }, info) => {
+test('the homepage lists Photolithography, then Rocket Flight & Mission Simulation as 02, then Humanoid and Automotive, as matching rows', async ({ page }, info) => {
   const errors = watchErrors(page);
   await page.goto('/');
   const cards = page.locator('article.card');
   await expect(cards).toHaveCount(4);
   await expect(cards.nth(0).getByRole('heading', { level: 3 })).toHaveText('Photolithography');
-  await expect(cards.nth(1).getByRole('heading', { level: 3 })).toHaveText('Rocket Engineering');
+  await expect(cards.nth(1).getByRole('heading', { level: 3 })).toHaveText('Rocket Flight & Mission Simulation');
   await expect(cards.nth(2).getByRole('heading', { level: 3 })).toHaveText('Humanoid');
   await expect(cards.nth(3).getByRole('heading', { level: 3 })).toHaveText('Automotive');
   expect(simulations.map((s) => s.slug)).toEqual(['photolithography', 'rocket', 'humanoid', 'automotive']);
@@ -44,7 +45,7 @@ test('the homepage lists Photolithography, then Rocket Engineering as 02, then H
   await expect(card.getByText(rocket.summary, { exact: true })).toBeVisible();
   const facts = await card.locator('.card__facts li').allTextContents();
   expect(facts).toEqual(['6 mission types', 'Interactive cutaways', 'Guided mission films']);
-  const launch = card.getByRole('link', { name: 'Launch simulation: Rocket Engineering' });
+  const launch = card.getByRole('link', { name: 'Launch simulation: Rocket Flight & Mission Simulation' });
   await expect(launch).toHaveAttribute('href', '/rocket');
   await expect(launch).toHaveText('Launch simulation');
   expect(await card.innerText(), 'no em dashes in the card').not.toContain('—');
@@ -174,6 +175,47 @@ test('the home screen starts cleanly: nothing fails to load, nothing is logged a
   expect(failed).toEqual([]);
   expect(outside, 'everything the simulation loads comes from its route').toEqual([]);
   expect(errors).toEqual([]);
+});
+
+/** Where the 3D scene is now (the simulation's test hooks, on with ?hooks=1). */
+async function location(page: Page, loc: 'hangar' | 'flight') {
+  await page.waitForFunction((l) => (window as unknown as { __rocketFrame?: { location: string; n: number } }).__rocketFrame?.location === l, loc, LOAD);
+  await page.waitForFunction(() => ((window as unknown as { __rocketFrame?: { n: number } }).__rocketFrame?.n ?? 0) > 5, null, LOAD);
+}
+
+test('a mission and the narrated film load everything they need from the route', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'the phone loads the same files');
+  const errors = watchErrors(page);
+  const failed: string[] = [];
+  const outside: string[] = [];
+  const paths: string[] = [];
+  page.on('response', (r) => {
+    if (r.status() >= 400) failed.push(`${r.status()} ${r.url()}`);
+  });
+  page.on('requestfailed', (r) => failed.push(`${r.failure()?.errorText} ${r.url()}`));
+  page.on('request', (r) => {
+    const u = new URL(r.url());
+    if (/^(data|blob):/.test(r.url())) return;
+    if (u.origin !== ORIGIN) return outside.push(r.url());
+    paths.push(u.pathname);
+    if (u.pathname !== '/rocket' && !u.pathname.startsWith('/rocket/')) outside.push(u.pathname);
+  });
+  // a mission: the launch site, the Earth and the sky, drawn from files under /rocket/
+  await page.goto('/rocket/?v=mission&m=leo&hooks=1');
+  await location(page, 'flight');
+  await expect(page.getByRole('button', { name: /Play mission|Pause mission/ })).toBeVisible();
+  await expect.poll(() => paths.filter((p) => p.startsWith('/rocket/textures/')).length, LOAD).toBeGreaterThan(3);
+  for (const folder of ['earth', 'sky', 'site']) expect(paths.some((p) => p.startsWith(`/rocket/textures/${folder}/`)), folder).toBe(true);
+  // the narrated film: its manifest and its first spoken segment, from /rocket/narration/
+  await page.goto('/rocket/?v=watch&hooks=1');
+  await page.getByRole('button', { name: /Overview: Satellite to low Earth orbit/ }).click();
+  await location(page, 'flight');
+  await expect(page.locator('.caption')).toBeVisible(LOAD);
+  await expect.poll(() => paths.some((p) => /^\/rocket\/narration\/film-1\/[\w-]+\.mp3$/.test(p)), LOAD).toBe(true);
+  expect(paths).toContain('/rocket/narration/film-1/manifest.json');
+  expect(failed).toEqual([]);
+  expect(outside, 'everything the simulation loads comes from its route').toEqual([]);
+  expect(errors.filter((e) => !/WebGL|GPU stall/.test(e))).toEqual([]);
 });
 
 test('its files come with the right types and caching; a missing one is a 404, never the page', async ({ request }, info) => {
