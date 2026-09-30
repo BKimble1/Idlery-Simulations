@@ -1,7 +1,7 @@
 /**
  * The simulations FAB / ONE publishes. Each entry is one route (/<slug>) and one card on the
- * homepage, in this order; the first entry marked `featured` gets the wide card. Nothing else
- * in the site needs to change to add one: see "Adding a simulation" in README.md.
+ * homepage, in this order (the card's number is its place in this list). Nothing else in the
+ * site needs to change to add one: see "Adding a simulation" in README.md.
  *
  * A simulation is its own project in simulations/<slug>/ with its own dependencies. The site's
  * build (scripts/build.mjs) builds it with Vite at its route (base /<slug>/, output
@@ -17,7 +17,6 @@
  * @property {string} summary     two or three sentences: what the visitor does and sees
  * @property {string[]} facts     three short facts (steps, machines, running time…)
  * @property {string} launch      the launch button's label
- * @property {boolean} [featured] the wide card
  * @property {{ mp4: string, webm: string, poster: string, alt: string }} preview
  *   the card's preview clip (H.264 MP4, and VP9 WebM for browsers without H.264) and its poster,
  *   in site/ (made by scripts/capture-preview.mjs); `alt` says what the clip shows
@@ -52,7 +51,6 @@ export default [
       'Follow one silicon wafer through a fab until it becomes a working inverter: coat it, expose it in a scanner, develop, etch and test it. Change the spin speed, the dose or the overlay, and the chip changes with it.',
     facts: ['37 guided steps', '15 machines', 'Narrated film'],
     launch: 'Launch simulation',
-    featured: true,
     preview: {
       mp4: 'media/photolithography/preview.mp4',
       webm: 'media/photolithography/preview.webm',

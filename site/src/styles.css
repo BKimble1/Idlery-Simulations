@@ -194,10 +194,11 @@ a {
   background: var(--line-2);
 }
 
+/* One card per simulation, one below the other, all alike. */
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(20px, 2.4vw, 28px);
 }
 
 /* A card is one link (its launch button, stretched over the card) with a pause button above it. */
@@ -416,34 +417,31 @@ a {
   border-radius: inherit;
 }
 
-/* The featured simulation spans the grid; on wide screens its screen, framed on the page's
-   own grey, sits beside the text. */
-.card--featured {
-  grid-column: 1 / -1;
-}
-@media (min-width: 1100px) {
-  .card--featured {
+/* On wide screens a card is a row: the simulation's screen, framed on the page's own grey, on
+   the left, and what it is on the right. Narrower, the screen sits above the text. */
+@media (min-width: 960px) {
+  .card {
     display: grid;
     grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   }
-  .card--featured .card__media {
+  .card__media {
     display: flex;
     align-items: center;
     padding: clamp(18px, 2.2vw, 32px);
     background: var(--bg);
     border-right: 1px solid var(--line);
   }
-  .card--featured .card__screen {
+  .card__screen {
     width: 100%;
     border-radius: var(--radius);
     border: 1px solid var(--line-2);
     box-shadow: var(--shadow-2);
   }
-  .card--featured .card__body {
+  .card__body {
     justify-content: center;
     padding: clamp(28px, 3vw, 44px);
   }
-  .card--featured .card__launch {
+  .card__launch {
     margin-top: 0;
   }
 }

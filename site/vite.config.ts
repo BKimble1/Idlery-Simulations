@@ -22,6 +22,8 @@ function fromConfig(): Plugin {
   };
 }
 
+const media = fileURLToPath(new URL('media/', import.meta.url)).replaceAll('\\', '/');
+
 // The FAB / ONE homepage and its 404 page. `npm run build` puts the simulations next to them.
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
@@ -39,6 +41,19 @@ export default defineConfig({
       input: {
         index: fileURLToPath(new URL('index.html', import.meta.url)),
         404: fileURLToPath(new URL('404.html', import.meta.url)),
+      },
+      output: {
+        // each card's preview clip and poster in media/<slug>/, as in site/media/<slug>/; the rest
+        // in assets/ (all of them with a content hash in their names)
+        assetFileNames: (asset) => {
+          for (const f of asset.originalFileNames) {
+            const p = f.replaceAll('\\', '/');
+            const rel = p.startsWith(media) ? p.slice(media.length) : p.startsWith('media/') ? p.slice('media/'.length) : '';
+            const slug = /^([a-z0-9-]+)\/[^/]+$/.exec(rel)?.[1];
+            if (slug) return `media/${slug}/[name]-[hash][extname]`;
+          }
+          return 'assets/[name]-[hash][extname]';
+        },
       },
     },
   },

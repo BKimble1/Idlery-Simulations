@@ -1,7 +1,8 @@
 /**
  * The homepage's simulation cards, written into index.html at build time from
  * simulations.config.mjs (so the page needs no script to show them, and search engines and
- * link previews see them too).
+ * link previews see them too). Every simulation gets the same card, numbered in the config's
+ * order: a row with its preview beside its description on wide screens, stacked on phones.
  */
 import type { Simulation } from '../simulations.config.mjs';
 
@@ -11,11 +12,11 @@ const ARROW = `<svg width="18" height="12" viewBox="0 0 20 14" aria-hidden="true
 const PLAY = `<svg class="i-play" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.6 L10.4 6 L3 10.4 Z" fill="currentColor"/></svg>`;
 const PAUSE = `<svg class="i-pause" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><rect x="2.2" y="1.5" width="2.8" height="9" rx="0.6" fill="currentColor"/><rect x="7" y="1.5" width="2.8" height="9" rx="0.6" fill="currentColor"/></svg>`;
 
-function card(s: Simulation, index: number, featured: boolean): string {
+function card(s: Simulation, index: number): string {
   const id = `sim-${s.slug}`;
   const num = String(index + 1).padStart(2, '0');
   return `
-        <article class="card${featured ? ' card--featured' : ''}" aria-labelledby="${id}">
+        <article class="card" aria-labelledby="${id}">
           <div class="card__media">
             <div class="card__screen" data-preview>
               <video class="card__video" muted loop playsinline preload="none" disablepictureinpicture disableremoteplayback
@@ -39,7 +40,6 @@ function card(s: Simulation, index: number, featured: boolean): string {
 }
 
 export function renderCards(simulations: Simulation[]): string {
-  const featured = simulations.findIndex((s) => s.featured);
-  return `<div class="cards">${simulations.map((s, i) => card(s, i, i === featured)).join('')}
+  return `<div class="cards">${simulations.map((s, i) => card(s, i)).join('')}
         </div>`;
 }

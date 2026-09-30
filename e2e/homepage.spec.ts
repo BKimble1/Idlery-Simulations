@@ -46,13 +46,13 @@ test('the homepage downloads nothing of the simulations, and little else before 
 test('each preview shows a real poster, then plays muted in place; it can be paused and played', async ({ page, isMobile }) => {
   const errors = watchErrors(page);
   await page.goto('/');
-  for (const [i] of simulations.entries()) {
+  for (const [i, s] of simulations.entries()) {
     const card = page.locator('article.card').nth(i);
     const video = card.locator('video');
     await card.scrollIntoViewIfNeeded();
-    // the poster is there before anything plays
+    // the poster is there before anything plays (in media/<slug>/, with a content hash)
     const poster = await video.getAttribute('poster');
-    expect(poster).toMatch(/^\/assets\/poster-[\w-]+\.webp$/);
+    expect(poster).toMatch(new RegExp(`^/media/${s.slug}/poster-[\\w-]+\\.webp$`));
     const img = await page.request.get(poster!);
     expect(img.status()).toBe(200);
     expect(img.headers()['content-type']).toBe('image/webp');
@@ -91,15 +91,21 @@ test('both preview files are served whole and in ranges, as video players ask fo
 });
 
 test.describe('with reduced motion', () => {
-  test('the preview waits for the visitor to press play', async ({ page }) => {
+  test('the previews wait for the visitor to press play', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await page.waitForTimeout(2500);
+    for (const [i] of simulations.entries()) {
+      const card = page.locator('article.card').nth(i);
+      const video = card.locator('video');
+      await card.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      expect(await state(video)).toMatchObject({ paused: true, t: 0 });
+    }
     const card = page.locator('article.card').first();
-    const video = card.locator('video');
-    expect(await state(video)).toMatchObject({ paused: true, t: 0 });
+    await card.scrollIntoViewIfNeeded();
     await card.getByRole('button', { name: 'Play the preview' }).click();
-    await expect.poll(async () => (await state(video)).t, { timeout: 60_000 }).toBeGreaterThan(0.5);
+    await expect.poll(async () => (await state(card.locator('video'))).t, { timeout: 60_000 }).toBeGreaterThan(0.5);
   });
 });
 
