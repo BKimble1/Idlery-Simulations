@@ -117,7 +117,8 @@ test('the card, and its launch button, open the simulation; the simulation leads
     // anywhere on the card: here, near its top left corner, on its picture
     await card.click({ position: { x: 60, y: 60 } });
     await expect(page).toHaveURL(new RegExp(`/${s.slug}$`));
-    await expect(page.getByRole('link', { name: 'Back to FAB / ONE' })).toBeVisible();
+    // the first is the header's (on a phone the rocket also labels one on its home card)
+    await expect(page.getByRole('link', { name: 'Back to FAB / ONE' }).first()).toBeVisible();
     await page.goBack();
     await expect(page).toHaveURL(/127\.0\.0\.1:8888\/$/);
     // the launch button, from the keyboard
@@ -126,7 +127,7 @@ test('the card, and its launch button, open the simulation; the simulation leads
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(new RegExp(`/${s.slug}$`));
     // and back to FAB / ONE
-    await page.getByRole('link', { name: 'Back to FAB / ONE' }).click();
+    await page.getByRole('link', { name: 'Back to FAB / ONE' }).first().click();
     await expect(page).toHaveURL(/127\.0\.0\.1:8888\/$/);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Step inside real engineering.');
   }

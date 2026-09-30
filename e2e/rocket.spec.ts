@@ -111,18 +111,21 @@ for (const path of ['/rocket', '/rocket/', '/rocket/?v=mission&m=leo']) {
 }
 
 test('the header shows "Back to FAB / ONE", on screen, and it leads home', async ({ page }, info) => {
-  // Known issue in the rocket (as imported, see simulations/rocket/SOURCE.json): below 480 px
-  // its header is laid out 495 px wide once the back link is in it, so on a phone the link is
-  // cut off at the right edge and the Learning path and Settings buttons are off screen. The
-  // fix belongs in the rocket's src/App.tsx and src/styles/app.css (README.md, "Rocket
-  // Engineering"). Once it is imported, this test passes on phones too and Playwright reports
-  // the expected failure as unexpected: then remove this line.
-  test.fail(info.project.name === 'phone', 'the rocket header does not fit a phone with its back link');
   await page.goto('/rocket');
   await shell(page);
-  const back = page.getByRole('link', { name: 'Back to FAB / ONE' });
+  // the header's link: labelled on wide screens, a back button first in the header below 960 px
+  // (its accessible name is the full label), with the labelled link on the home card as well
+  const back = page.getByRole('banner').getByRole('link', { name: 'Back to FAB / ONE' });
   await expect(back).toBeVisible();
   await expect(back).toHaveAttribute('href', '/');
+  if (info.project.name === 'phone') {
+    const labelled = page.getByRole('main').getByRole('link', { name: 'Back to FAB / ONE' });
+    await expect(labelled).toBeVisible();
+    await expect(labelled).toHaveText(/Back to FAB \/ ONE/);
+    await expect(labelled).toHaveAttribute('href', '/');
+  } else {
+    await expect(back).toHaveText(/Back to FAB \/ ONE/);
+  }
   // wholly on screen, clear of the header's controls, which are all on screen too
   const vw = page.viewportSize()!.width;
   const b = (await back.boundingBox())!;
@@ -134,6 +137,7 @@ test('the header shows "Back to FAB / ONE", on screen, and it leads home', async
   for (const o of others.filter((o) => o.width > 0)) {
     const apart = o.right <= b.x + 0.5 || o.left >= b.x + b.width - 0.5 || o.bottom <= b.y + 0.5 || o.top >= b.y + b.height - 0.5;
     expect(apart, `the back link overlaps a header control (${JSON.stringify(o)})`).toBe(true);
+    expect(o.left, 'a header control is off screen').toBeGreaterThanOrEqual(-0.5);
     expect(o.right, 'a header control is off screen').toBeLessThanOrEqual(vw + 0.5);
   }
   await back.click();
@@ -142,7 +146,7 @@ test('the header shows "Back to FAB / ONE", on screen, and it leads home', async
   // and from a mission
   await page.goto('/rocket/?v=mission&m=leo');
   await shell(page);
-  await page.getByRole('link', { name: 'Back to FAB / ONE' }).click();
+  await page.getByRole('banner').getByRole('link', { name: 'Back to FAB / ONE' }).click();
   await expect(page).toHaveURL(`${ORIGIN}/`);
 });
 
