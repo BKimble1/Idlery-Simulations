@@ -68,11 +68,11 @@ export default [
   },
   {
     slug: 'rocket',
-    title: 'Rocket Engineering',
+    title: 'Rocket Flight & Mission Simulation',
     tagline: 'From the launch pad to orbit.',
     field: 'Aerospace engineering',
     summary:
-      'Open up a two-stage rocket in the hangar and see how its engines, tanks and structures work, in cutaway or taken apart. Then follow six complete missions from the pad to orbit and back, including a booster landing and a capsule return, or watch them as narrated films.',
+      'An interactive simulation for exploring rocket systems, launch sequences, staging, flight phases and mission operations. Open up a two-stage rocket in the hangar, then fly six complete missions from the pad to orbit and back.',
     facts: ['6 mission types', 'Interactive cutaways', 'Guided mission films'],
     launch: 'Launch simulation',
     preview: {
