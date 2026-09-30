@@ -1,0 +1,373 @@
+/**
+ * Geometry helpers for the site: a batch that merges static parts per material (few draw
+ * calls), instanced members along segments (tower lattice, fence posts, pipe supports),
+ * bevelled boxes, pipes with bent corners and extruded profiles.
+ */
+import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+
+/** Make a geometry mergeable: indexed, with position/normal/uv only. */
+export function normalizeGeo(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  for (const name of Object.keys(g.attributes)) if (name !== 'position' && name !== 'normal' && name !== 'uv') g.deleteAttribute(name);
+  if (!g.attributes.normal) g.computeVertexNormals();
+  if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 2), 2));
+  if (!g.index) {
+    const n = g.attributes.position.count;
+    const idx = n > 65535 ? new Uint32Array(n) : new Uint16Array(n);
+    for (let i = 0; i < n; i++) idx[i] = i;
+    g.setIndex(new THREE.BufferAttribute(idx, 1));
+  }
+  g.morphAttributes = {};
+  g.clearGroups();
+  return g;
+}
+
+export interface MeshOpts {
+  cast?: boolean;
+  receive?: boolean;
+  part?: string;
+  material?: string;
+  name?: string;
+  /** Thermal-lens class (0 cryogenic .. 4 very hot); defaults to thermalClass(part). */
+  thermal?: number;
+}
+
+/**
+ * Thermal-lens class of a ground part (userData.thermal, the vehicle's scale 0..4): the flame
+ * deflector and the trench take the plume (3); every other structure stays near ambient (1).
+ */
+export function thermalClass(part: string | undefined): number {
+  return part === 'flame-deflector' ? 3 : 1;
+}
+
+/**
+ * Content material ids (src/content/materials) of the site's surfaces, and the materials each
+ * ground part is taught with (src/content/materials/assignments.ts). A mesh tagged with a part
+ * gets userData.material from its site material when that material belongs to the part.
+ */
+const SITE_MATERIAL_IDS: Record<string, string> = {
+  'site.towerSteel': 'structural-steel',
+  'site.steelDark': 'structural-steel',
+  'site.galv': 'structural-steel',
+  'site.grating': 'structural-steel',
+  'site.yellow': 'structural-steel',
+  'site.white': 'structural-steel',
+  'site.stainless': 'stainless',
+  'site.deflector': 'stainless',
+  'site.hardstand': 'refractory-concrete',
+  'site.refractory': 'refractory-concrete',
+  'site.concreteDark': 'refractory-concrete',
+};
+const PART_MATERIALS: Record<string, string[]> = {
+  'launch-mount': ['stainless', 'structural-steel', 'refractory-concrete'],
+  'service-tower': ['structural-steel'],
+  'flame-deflector': ['stainless', 'refractory-concrete'],
+  'sound-suppression': ['structural-steel'],
+};
+
+/** The content material id for a mesh of `part` drawn with site material `m` (or undefined). */
+export function materialTag(part: string | undefined, m: THREE.Material): string | undefined {
+  if (!part) return undefined;
+  const id = SITE_MATERIAL_IDS[m.name];
+  return id && PART_MATERIALS[part]?.includes(id) ? id : undefined;
+}
+
+export interface BatchView {
+  add(g: THREE.BufferGeometry, m: THREE.Material, matrix?: THREE.Matrix4, opts?: MeshOpts): void;
+  at(g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rotY?: number, opts?: MeshOpts): void;
+}
+
+/** Merge geometries (normalized) into one, applying optional matrices. */
+export function mergeParts(parts: { g: THREE.BufferGeometry; m?: THREE.Matrix4 }[]): THREE.BufferGeometry {
+  const list = parts.map(({ g, m }) => {
+    const n = normalizeGeo(g);
+    if (m) n.applyMatrix4(m);
+    return n;
+  });
+  const merged = mergeGeometries(list, false)!;
+  list.forEach((g) => g.dispose());
+  merged.computeBoundingSphere();
+  return merged;
+}
+
+/**
+ * Collects geometries and emits one merged mesh per (material, part) pair: static sub-assemblies
+ * cost one draw call per material, and every mesh carries the part (userData.part) and content
+ * material (userData.material) the learning views pick and highlight. `part` is the default part
+ * for adds that do not name one (set it around a sub-assembly with `as(part, fn)`).
+ */
+export class Batch {
+  private groups = new Map<string, { m: THREE.Material; list: THREE.BufferGeometry[]; opts: MeshOpts; part?: string; tag?: string; thermal: number }>();
+  part: string | undefined;
+  constructor(private defaults: MeshOpts = { cast: true, receive: true }) {
+    this.part = defaults.part;
+  }
+  /** Run `fn` with `part` as the default part of every add. */
+  as(part: string | undefined, fn: () => void) {
+    const prev = this.part;
+    this.part = part;
+    fn();
+    this.part = prev;
+  }
+  add(g: THREE.BufferGeometry, m: THREE.Material, matrix?: THREE.Matrix4, opts?: MeshOpts) {
+    const geo = normalizeGeo(g);
+    if (matrix) geo.applyMatrix4(matrix);
+    const part = opts?.part ?? this.part;
+    const tag = opts?.material ?? materialTag(part, m);
+    const thermal = opts?.thermal ?? thermalClass(part);
+    const key = `${m.uuid}|${part ?? ''}|${tag ?? ''}|${thermal}`;
+    let e = this.groups.get(key);
+    if (!e) {
+      e = { m, list: [], opts: { ...(opts ?? {}) }, part, tag, thermal };
+      this.groups.set(key, e);
+    } else if (opts) {
+      // the first add that sets shadow flags or a name decides them for the merged mesh
+      for (const k of ['cast', 'receive', 'name'] as const) if (e.opts[k] === undefined && opts[k] !== undefined) (e.opts as Record<string, unknown>)[k] = opts[k];
+    }
+    e.list.push(geo);
+  }
+  /** Add at a position with an optional rotation about +Y. */
+  at(g: THREE.BufferGeometry, m: THREE.Material, x: number, y: number, z: number, rotY = 0, opts?: MeshOpts) {
+    const mat = new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z);
+    this.add(g, m, mat, opts);
+  }
+  /**
+   * A view of this batch in a local frame: parts added through it are transformed by `base`
+   * and merged with everything else of the same material (static sub-assemblies cost no extra
+   * draw calls).
+   */
+  view(base: THREE.Matrix4): BatchView {
+    const self = this;
+    return {
+      add(g, m, matrix, opts) {
+        self.add(g, m, matrix ? base.clone().multiply(matrix) : base.clone(), opts);
+      },
+      at(g, m, x, y, z, rotY = 0, opts) {
+        self.add(g, m, base.clone().multiply(new THREE.Matrix4().makeRotationY(rotY).setPosition(x, y, z)), opts);
+      },
+    };
+  }
+  build(parent: THREE.Object3D, name = 'batch'): THREE.Mesh[] {
+    const out: THREE.Mesh[] = [];
+    for (const e of this.groups.values()) {
+      const merged = mergeGeometries(e.list, false);
+      for (const g of e.list) g.dispose();
+      if (!merged) continue;
+      merged.computeBoundingSphere();
+      const o = { ...this.defaults, ...e.opts };
+      const mesh = new THREE.Mesh(merged, e.m);
+      mesh.name = o.name ?? `${name}:${e.m.name}${e.part ? `:${e.part}` : ''}`;
+      mesh.castShadow = !!o.cast;
+      mesh.receiveShadow = !!o.receive;
+      if (e.part) mesh.userData.part = e.part;
+      if (e.tag) mesh.userData.material = e.tag;
+      mesh.userData.thermal = e.thermal;
+      parent.add(mesh);
+      out.push(mesh);
+    }
+    this.groups.clear();
+    return out;
+  }
+}
+
+// ───────────────────────────── primitives ─────────────────────────────
+
+export function box(w: number, h: number, d: number): THREE.BufferGeometry {
+  return new THREE.BoxGeometry(w, h, d);
+}
+
+/** Box with rounded edges (real bevels catch the light at close range). */
+export function bevelBox(w: number, h: number, d: number, r = 0.03, seg = 2): THREE.BufferGeometry {
+  const rr = Math.min(r, w / 2 - 1e-4, h / 2 - 1e-4, d / 2 - 1e-4);
+  return new RoundedBoxGeometry(w, h, d, seg, Math.max(rr, 1e-4));
+}
+
+export function cyl(r: number, h: number, seg = 24, rTop = r, open = false): THREE.BufferGeometry {
+  return new THREE.CylinderGeometry(rTop, r, h, seg, 1, open);
+}
+
+const _up = new THREE.Vector3(0, 1, 0);
+const _dir = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+
+/** Matrix placing a unit member (along +Y, centred) between a and b with section scale (sx, sz). */
+export function memberMatrix(a: THREE.Vector3, b: THREE.Vector3, sx: number, sz: number, out: THREE.Matrix4, roll?: THREE.Vector3): THREE.Matrix4 {
+  _dir.subVectors(b, a);
+  const len = _dir.length();
+  _dir.divideScalar(len || 1);
+  if (roll) {
+    // orient the member's local X toward `roll` projected perpendicular to the axis
+    const x = roll.clone().addScaledVector(_dir, -roll.dot(_dir));
+    if (x.lengthSq() < 1e-8) x.set(1, 0, 0).addScaledVector(_dir, -_dir.x);
+    x.normalize();
+    const z = new THREE.Vector3().crossVectors(x, _dir);
+    out.makeBasis(x, _dir, z);
+    out.scale(new THREE.Vector3(sx, len, sz));
+  } else {
+    _q.setFromUnitVectors(_up, _dir);
+    out.compose(new THREE.Vector3(), _q, new THREE.Vector3(sx, len, sz));
+  }
+  out.setPosition((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return out;
+}
+
+/** A cylinder between two points. */
+export function rod(a: THREE.Vector3, b: THREE.Vector3, r: number, seg = 12, open = false): THREE.BufferGeometry {
+  const g = new THREE.CylinderGeometry(r, r, 1, seg, 1, open);
+  g.applyMatrix4(memberMatrix(a, b, 1, 1, new THREE.Matrix4()));
+  return g;
+}
+
+/** Unit I-beam section (flange width 1, depth 1, along +Y, length 1). */
+export function iBeamUnit(flange = 0.14, web = 0.1): THREE.BufferGeometry {
+  const s = new THREE.Shape();
+  const h = 0.5;
+  const f = flange;
+  const w = web / 2;
+  s.moveTo(-h, -h);
+  s.lineTo(h, -h);
+  s.lineTo(h, -h + f);
+  s.lineTo(w, -h + f);
+  s.lineTo(w, h - f);
+  s.lineTo(h, h - f);
+  s.lineTo(h, h);
+  s.lineTo(-h, h);
+  s.lineTo(-h, h - f);
+  s.lineTo(-w, h - f);
+  s.lineTo(-w, -h + f);
+  s.lineTo(-h, -h + f);
+  s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: 1, bevelEnabled: false });
+  g.translate(0, 0, -0.5);
+  g.rotateX(-Math.PI / 2);
+  return g;
+}
+
+/** Collects instance matrices for one unit geometry; builds an InstancedMesh. */
+export class Instances {
+  mats: THREE.Matrix4[] = [];
+  constructor(
+    public geo: THREE.BufferGeometry,
+    public mat: THREE.Material,
+  ) {}
+  member(a: THREE.Vector3, b: THREE.Vector3, sx: number, sz = sx, roll?: THREE.Vector3) {
+    this.mats.push(memberMatrix(a, b, sx, sz, new THREE.Matrix4(), roll));
+  }
+  push(m: THREE.Matrix4) {
+    this.mats.push(m.clone());
+  }
+  /** Merge every instance into a batch instead (for small counts inside a moving sub-assembly). */
+  mergeInto(b: Batch | BatchView, mat: THREE.Material = this.mat, opts?: MeshOpts) {
+    for (const m of this.mats) b.add(this.geo.clone(), mat, m, opts);
+    this.mats = [];
+  }
+  build(parent: THREE.Object3D, name: string, opts: MeshOpts = { cast: true, receive: true }): THREE.InstancedMesh | null {
+    if (!this.mats.length) return null;
+    const im = new THREE.InstancedMesh(this.geo, this.mat, this.mats.length);
+    this.mats.forEach((m, i) => im.setMatrixAt(i, m));
+    im.instanceMatrix.needsUpdate = true;
+    im.computeBoundingSphere();
+    im.name = name;
+    im.castShadow = opts.cast ?? true;
+    im.receiveShadow = opts.receive ?? true;
+    if (opts.part) im.userData.part = opts.part;
+    const tag = opts.material ?? materialTag(opts.part, this.mat);
+    if (tag) im.userData.material = tag;
+    im.userData.thermal = opts.thermal ?? thermalClass(opts.part);
+    parent.add(im);
+    return im;
+  }
+}
+
+/**
+ * A pipe along a polyline with bends of radius `bend` at the corners: rings only where the
+ * direction changes (one span per straight run, `arc` spans per bend), oriented by parallel
+ * transport so the surface does not twist.
+ */
+export function pipe(points: THREE.Vector3[], r: number, bend = r * 3, radial = 12, arc = 8): THREE.BufferGeometry {
+  // centreline samples
+  const c: THREE.Vector3[] = [points[0].clone()];
+  for (let i = 1; i < points.length - 1; i++) {
+    const p = points[i];
+    const a = new THREE.Vector3().subVectors(c[c.length - 1], p);
+    const b = new THREE.Vector3().subVectors(points[i + 1], p);
+    const k = Math.min(bend, a.length() * 0.45, b.length() * 0.45);
+    const p0 = p.clone().addScaledVector(a.normalize(), k);
+    const p1 = p.clone().addScaledVector(b.normalize(), k);
+    const q = new THREE.QuadraticBezierCurve3(p0, p.clone(), p1);
+    for (let s = 0; s <= arc; s++) {
+      const pt = q.getPoint(s / arc);
+      if (pt.distanceTo(c[c.length - 1]) > 1e-4) c.push(pt);
+    }
+  }
+  const end = points[points.length - 1].clone();
+  if (end.distanceTo(c[c.length - 1]) > 1e-4) c.push(end);
+  const n = c.length;
+  // tangents (averaged at interior samples) and a parallel-transported normal
+  const T = c.map((p, i) => {
+    const t = new THREE.Vector3();
+    if (i > 0) t.add(new THREE.Vector3().subVectors(p, c[i - 1]).normalize());
+    if (i < n - 1) t.add(new THREE.Vector3().subVectors(c[i + 1], p).normalize());
+    return t.normalize();
+  });
+  const N: THREE.Vector3[] = [];
+  {
+    const t0 = T[0];
+    const helper = Math.abs(t0.y) < 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+    N.push(new THREE.Vector3().crossVectors(t0, helper).normalize());
+    for (let i = 1; i < n; i++) {
+      const q = new THREE.Quaternion().setFromUnitVectors(T[i - 1], T[i]);
+      N.push(N[i - 1].clone().applyQuaternion(q).addScaledVector(T[i], -N[i - 1].clone().applyQuaternion(q).dot(T[i])).normalize());
+    }
+  }
+  const pos: number[] = [];
+  const nor: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  let along = 0;
+  for (let i = 0; i < n; i++) {
+    if (i > 0) along += c[i].distanceTo(c[i - 1]);
+    const B = new THREE.Vector3().crossVectors(T[i], N[i]);
+    // at a bend sample the ring is the cross-section of the averaged tangent (no pinching)
+    for (let j = 0; j <= radial; j++) {
+      const a = (j / radial) * Math.PI * 2;
+      const dx = Math.cos(a);
+      const dy = Math.sin(a);
+      const nx = N[i].x * dx + B.x * dy;
+      const ny = N[i].y * dx + B.y * dy;
+      const nz = N[i].z * dx + B.z * dy;
+      pos.push(c[i].x + nx * r, c[i].y + ny * r, c[i].z + nz * r);
+      nor.push(nx, ny, nz);
+      uv.push(j / radial, along / (2 * Math.PI * r));
+    }
+  }
+  for (let i = 0; i < n - 1; i++)
+    for (let j = 0; j < radial; j++) {
+      const a = i * (radial + 1) + j;
+      const b = a + radial + 1;
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
+    }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  return g;
+}
+
+/** Extrude a 2D profile (x, y) along +Z by depth, optional bevel. */
+export function extrude(pts: [number, number][], depth: number, bevel = 0, holes: [number, number][][] = [], curveSegs = 12): THREE.BufferGeometry {
+  const s = new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  for (const h of holes) s.holes.push(new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, y))));
+  return new THREE.ExtrudeGeometry(s, {
+    depth,
+    bevelEnabled: bevel > 0,
+    bevelThickness: bevel,
+    bevelSize: bevel,
+    bevelSegments: 2,
+    curveSegments: curveSegs,
+  });
+}
+
+export const v3 = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);

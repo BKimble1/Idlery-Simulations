@@ -17,7 +17,8 @@
     "e2e": "playwright test",
     "e2e:photolithography": "node scripts/simulation-e2e.mjs photolithography",
     "capture-preview": "node scripts/capture-preview.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "import-simulation": "node scripts/import-simulation.mjs"
   },
   "devDependencies": {
     "@fontsource-variable/archivo": "5.3.0",

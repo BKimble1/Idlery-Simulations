@@ -1,0 +1,72 @@
+{
+  "about": "Where simulations/rocket/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
+  "repository": "https://github.com/BKimble1/rocket-simulation",
+  "branch": "claude/kimble-rocket-engineering",
+  "commit": "ec43e1f295e984e541b8eeaf46f3b3b9decfd258",
+  "commitDate": "2026-09-30T04:51:05+00:00",
+  "commitSubject": "Telemetry: felt acceleration from the reference trajectory, so it holds while paused",
+  "importedAt": "2026-09-30T05:07:40.215Z",
+  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/kimble-rocket-engineering",
+  "excluded": [
+    {
+      "pattern": "docs/recordings/",
+      "why": "verification videos made during development; not part of the app",
+      "files": 26,
+      "bytes": 13228870
+    },
+    {
+      "pattern": "docs/screenshots/",
+      "why": "screenshots made during development; not part of the app",
+      "files": 4,
+      "bytes": 532977
+    },
+    {
+      "pattern": "tools/",
+      "why": "offline Python pipelines (narration, textures, brand, site bake); their outputs are committed in public/ and src/",
+      "files": 32,
+      "bytes": 255621
+    },
+    {
+      "pattern": "release/",
+      "why": "packaged builds",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "dist*/",
+      "why": "build output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "node_modules/",
+      "why": "dependencies (installed with npm ci)",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "test-results/",
+      "why": "test output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "playwright-report/",
+      "why": "test output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "public/og/",
+      "why": "the stand-alone hub card (poster and preview clip); nothing in src/ or index.html loads it, and FAB / ONE records its own card preview in site/media/<slug>/",
+      "files": 3,
+      "bytes": 702283
+    },
+    {
+      "pattern": "public/narration/*/qa.json",
+      "why": "measurements from the offline narration pipeline (tools/narration); the app reads only manifest.json and the audio",
+      "files": 1,
+      "bytes": 244111
+    }
+  ]
+}
