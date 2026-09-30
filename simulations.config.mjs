@@ -40,6 +40,13 @@ export const site = {
   url: 'https://simulations.idlery.com',
 };
 
+/**
+ * For files that keep their name when they change (no content hash): browsers use their copy
+ * for an hour without asking, then check it again while showing it (a changed file is seen on
+ * the next visit), instead of asking about every texture and sound on every visit.
+ */
+const REVALIDATED = { 'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400' };
+
 /** @type {Simulation[]} */
 export default [
   {
@@ -58,5 +65,30 @@ export default [
       alt: 'Recorded in the simulation: the scanner exposes the wafer with its light path shown; in the magnified cross-section, developer washes the exposed resist away; the finished inverter switches its output when the input is flipped; and the camera crosses the fab to the scanner.',
     },
     serviceWorker: 'sw.js',
+  },
+  {
+    slug: 'rocket',
+    title: 'Rocket Engineering',
+    tagline: 'From the launch pad to orbit.',
+    field: 'Aerospace engineering',
+    summary:
+      'Open up a two-stage rocket in the hangar and see how its engines, tanks and structures work, in cutaway or taken apart. Then follow six complete missions from the pad to orbit and back, including a booster landing and a capsule return, or watch them as narrated films.',
+    facts: ['6 mission types', 'Interactive cutaways', 'Guided mission films'],
+    launch: 'Launch simulation',
+    preview: {
+      mp4: 'media/rocket/preview.mp4',
+      webm: 'media/rocket/preview.webm',
+      poster: 'media/rocket/poster.webp',
+      alt: 'Recorded in the simulation: the two-stage rocket stands on its launch pad, its engines ignite, a white cloud spreads across the pad and the rocket lifts off its mount; then, high above the Earth, with the booster\'s engines shut down, the two stages begin to separate.',
+    },
+    // KIMBLE Rocket Engineering names its way back VITE_HUB_URL and VITE_HUB_LABEL (src/config.ts)
+    env: { VITE_HUB_URL: '/', VITE_HUB_LABEL: 'Back to FAB / ONE' },
+    // its own `npm run build` (tsc -b && vite build), with the route's options given to vite itself
+    build: [
+      ['npx', 'tsc', '-b'],
+      ['npx', 'vite', 'build', '--base', '{base}', '--outDir', '{outDir}', '--emptyOutDir'],
+    ],
+    // textures, the Earth and Moon maps and the narration keep their names from build to build
+    headers: { 'textures/*': REVALIDATED, 'narration/*': REVALIDATED },
   },
 ];

@@ -1,0 +1,41 @@
+{
+  "about": "Shot list for the homepage preview (scripts/capture-preview.mjs). Both segments open the LEO mission as a deep link, with the interface hidden (ui=0) and the rocket's frame-stepped clock (virt=1: each rendered frame is exactly 1/30 s, advanced by window.__rocketAdvance). The clock only moves when advanced, so the page is stepped while it loads, until the launch site is on screen and the dissolve into it has finished. Mission times are seconds from liftoff (engine start T-3.0 s, stage separation T+151.2 s).",
+  "viewport": { "width": 1280, "height": 720, "dpr": 1 },
+  "fps": 30,
+  "crossfade": 0.4,
+  "crf": 26,
+  "crfVp9": 40,
+  "query": "virt=1&capture=1&ui=0&quality=high",
+  "ready": {
+    "hooks": "typeof window.__rocketAdvance === 'function' && typeof window.__rocketSeekMission === 'function' && !!window.__rocketPlayback?.player",
+    "until": "window.__rocketFrame?.location === 'flight' && window.__rocketDirector.ready.flight && !window.__rocketDirector.waiting && !window.__rocketDirector.dissolve",
+    "advancing": true,
+    "interval": 250,
+    "timeout": 600000
+  },
+  "advance": "window.__rocketAdvance(1)",
+  "segments": [
+    {
+      "name": "launch",
+      "about": "On the pad from T-4 s to T+2 s: the engines start (T-3 s), the exhaust cloud spreads across the pad and the rocket lifts off its mount (T-0).",
+      "path": "?v=mission&m=leo",
+      "setup": [
+        { "eval": "window.__rocketSeekMission(-4)" },
+        { "advance": 20 },
+        { "eval": "window.__rocketSeekMission(-4); window.__rocketPlayback.player.setRate?.(1); window.__rocketPlayback.player.play()" }
+      ],
+      "frames": 180
+    },
+    {
+      "name": "staging",
+      "about": "High above the Earth from T+148.8 s to T+152.8 s, after main engine cutoff (T+147.4 s): the stages separate (T+151.2 s).",
+      "path": "?v=mission&m=leo",
+      "setup": [
+        { "eval": "window.__rocketSeekMission(148.8)" },
+        { "advance": 20 },
+        { "eval": "window.__rocketSeekMission(148.8); window.__rocketPlayback.player.setRate?.(1); window.__rocketPlayback.player.play()" }
+      ],
+      "frames": 120
+    }
+  ]
+}
