@@ -30,7 +30,7 @@ import { absState, angleIn, circularOrbit, cwPropagate, cwTarget, lvlh, lvlhAtti
 import { CAPSULE_DOCK_Y, ENG_SM, SM_DRY, SM_PROP_FULL, STATION_DOCK, STATION_MASS, areaOf, sumMass } from '../physics/vehicle';
 import { DEG, qaxisY, qdelta, v3, vadd, vcross, vlen, vnorm, vscale, type V3 } from '../physics/vec';
 import { OUTLINES } from './outline';
-import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots } from './common';
+import { Pres, contiguous, phasesFrom, rateNote, shot, tidyShots, launchShots } from './common';
 import { ascentFacts, flyOrbitalAscent, s2Channels } from './flight';
 
 const START = -60;
@@ -323,11 +323,7 @@ export function buildStation(): MissionTimeline {
   const tLes = E('les-jettison');
   const shots = tidyShots(
     [
-      shot('pad-wide', START, -14, 'booster', undefined, { look: 0.4 }),
-      shot('pad-close', -14, 5, 'booster', undefined, { look: -0.7, fov: 30 }),
-      shot('tower', 5, T.towerClear + 3, 'booster'),
-      shot('pad-wide', T.towerClear + 3, T.towerClear + 16, 'booster'),
-      shot('ground-track', T.towerClear + 16, T.throttleDown, 'booster'),
+      ...launchShots(START, T.towerClear, T.throttleDown),
       shot('chase', T.throttleDown, T.meco - 8, 'booster', undefined, { d: 110, az: 25, el: 6 }),
       shot('staging', T.meco - 8, T.ses1 + 4, 'upper', 'booster', { d: 75, az: 100, el: 8 }),
       shot('staging', T.ses1 + 4, tLes + 16, 'upper', 'les', { d: 60, az: 70, el: 12 }),
@@ -340,9 +336,11 @@ export function buildStation(): MissionTimeline {
       shot('orbit', pb1.end + 20, pb2.start - 20, 'capsule', 'earth', { d: 40, az: 200, el: 20 }),
       shot('chase', pb2.start - 20, pb2.end + 20, 'capsule', undefined, { d: 30, az: 150, el: 12 }),
       shot('orbit', pb2.end + 20, tH + 600, 'capsule', 'earth', { d: 40 }),
-      shot('approach', tH + 600, tHold1 + H1, 'capsule', 'station', { d: 60, az: 180, el: -30, mix: 0.3 }),
-      shot('approach', tHold1 + H1, tFinalStart, 'capsule', 'station', { d: 40, az: 90, el: -10, mix: 0.5 }),
-      shot('approach', tFinalStart, end, 'capsule', 'station', { d: 25, az: 80, el: 0, mix: 0.6 }),
+      // rendezvous angles are measured around the approach line (az 0: behind the capsule,
+      // looking along it to the station ahead; 90: beside the line)
+      shot('approach', tH + 600, tHold1 + H1, 'capsule', 'station', { d: 60, az: 25, el: 14, mix: 0.35 }),
+      shot('approach', tHold1 + H1, tFinalStart, 'capsule', 'station', { d: 45, az: 55, el: 8, mix: 0.5 }),
+      shot('approach', tFinalStart, end, 'capsule', 'station', { d: 32, az: 80, el: 6, mix: 0.55 }),
     ],
     START,
     end,

@@ -152,12 +152,12 @@ here: changes go to its repository, then it is imported again.
 **Updating it** (or importing another simulation the same way):
 
 ```bash
-# the branch as it is now
-npm run import-simulation -- rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/kimble-rocket-engineering
+# the V2 branch as it is now
+npm run import-simulation -- rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/clever-pascal-y4v4d8
 # an exact commit (SOURCE.json's "command" is this, for the current import)
-npm run import-simulation -- rocket --repo https://github.com/BKimble1/rocket-simulation --ref <commit> --branch claude/kimble-rocket-engineering
+npm run import-simulation -- rocket --repo https://github.com/BKimble1/rocket-simulation --ref <commit> --branch claude/clever-pascal-y4v4d8
 # or from a local clone, at a branch, tag or commit
-npm run import-simulation -- rocket --repo ../rocket-simulation --ref origin/claude/kimble-rocket-engineering
+npm run import-simulation -- rocket --repo ../rocket-simulation --ref origin/claude/clever-pascal-y4v4d8
 git diff --stat simulations/rocket     # review
 npm run build && npm run e2e           # then re-record the preview if the launch or staging changed
 ```
@@ -172,8 +172,9 @@ stand-alone card preview, which nothing in its `src/` or `index.html` loads) and
 `public/narration/*/qa.json` (measurements from the narration pipeline; the app reads only
 `manifest.json` and the audio). It keeps `src/`, `public/` (textures, narration audio, brand),
 `index.html`, `package.json` and `package-lock.json`, the TypeScript and Vite configs, `e2e/`,
-`scripts/` and the documents. The current import is
-`ec43e1f295e984e541b8eeaf46f3b3b9decfd258` (2026-09-30, branch `claude/kimble-rocket-engineering`).
+`scripts/` and the documents. The current import is V2,
+`fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1` (2026-09-30, branch `claude/clever-pascal-y4v4d8`, which builds on
+V1's `claude/kimble-rocket-engineering` at `ec43e1f`).
 
 **How it is built.** The rocket's own build script is `tsc -b && vite build`, so its entry in
 `simulations.config.mjs` runs those two commands itself and hands `--base /rocket/`,
@@ -184,21 +185,19 @@ config bridges the two: `VITE_HUB_URL=/` and `VITE_HUB_LABEL=Back to FAB / ONE`,
 build next to `VITE_FABONE_HOME=/`. It registers no service worker and keeps its settings and
 progress in local storage keys of its own (`kimble.*`).
 
-**Open issues in the rocket's source** (to fix in its repository, then import again). On
-screens narrower than 480 px its header is laid out 495 px wide once the back link is in it,
-so on a phone "Back to FAB / ONE" is cut off at the right edge and the Learning path and
-Settings buttons are off screen. The link still works (the site's tests click it), and the
-test that wants it wholly on screen is marked as an expected failure on phones in
-`e2e/rocket.spec.ts`; remove that mark once the fix is imported. A second, smaller one: its
-`index.html` links its icon as `./brand/kimble-mark.svg`, which the site's build rewrites to
-`/rocket/brand/kimble-mark.svg` (the source should say `/brand/kimble-mark.svg`).
+**Its way back on phones.** Below 960 px the rocket's header has no room for the words, so
+its link back is a round back button placed first in the header (its accessible name is the
+full "Back to FAB / ONE"), and the labelled link sits on its home card; Settings and the page
+shown without WebGL carry it too. Its `index.html` links its icon from the base
+(`/brand/kimble-mark.svg`), which `vite build --base /rocket/` resolves.
 
 **Its preview** is recorded from the built site on its frame-stepped clock
 (`?virt=1&capture=1&ui=0&quality=high`: each frame is exactly 1/30 s, whatever the render
 time), from the shot list in [`site/media/rocket/preview.json`](site/media/rocket/preview.json):
-the launch from T-4 s to T+2 s (engine start at T-3 s, liftoff), then a cross-fade to T+148.8 s
-to T+152.8 s (stage separation at T+151.2 s), 9.6 s in all. With software WebGL a frame takes
-5 to 10 seconds, so the clip (300 frames) takes the better part of an hour; see
+the launch from T-4 s to T+2 s (engine start at T-3 s, liftoff), then a cross-fade to T+155 s
+to T+159.5 s (the stages drifting apart after their separation at T+151.2 s, and the upper-stage
+engine starting at T+158.2 s), 10.1 s in all. With software WebGL a frame takes
+5 to 10 seconds, so the clip (315 frames) takes the better part of an hour; see
 [`site/media/rocket/PROVENANCE.md`](site/media/rocket/PROVENANCE.md) for the current one:
 
 ```bash

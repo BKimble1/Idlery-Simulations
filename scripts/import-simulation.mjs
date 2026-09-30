@@ -5,8 +5,8 @@
 //   node scripts/import-simulation.mjs <slug> --repo <path-or-git-url> --ref <branch|tag|commit>
 //        [--branch <name>] [--url <https://github.com/owner/repo>] [--force]
 //
-//   node scripts/import-simulation.mjs rocket --repo ../rocket-simulation --ref origin/claude/kimble-rocket-engineering
-//   node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/kimble-rocket-engineering
+//   node scripts/import-simulation.mjs rocket --repo ../rocket-simulation --ref origin/claude/clever-pascal-y4v4d8
+//   node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/clever-pascal-y4v4d8
 //
 // The tree comes from `git archive` (so no .git folder and nothing uncommitted), minus the
 // paths in EXCLUDE below. simulations/<slug>/ is replaced as a whole; its node_modules is kept

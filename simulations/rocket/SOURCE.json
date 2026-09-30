@@ -1,18 +1,18 @@
 {
   "about": "Where simulations/rocket/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
   "repository": "https://github.com/BKimble1/rocket-simulation",
-  "branch": "claude/kimble-rocket-engineering",
-  "commit": "ec43e1f295e984e541b8eeaf46f3b3b9decfd258",
-  "commitDate": "2026-09-30T04:51:05+00:00",
-  "commitSubject": "Telemetry: felt acceleration from the reference trajectory, so it holds while paused",
-  "importedAt": "2026-09-30T06:28:25.339Z",
-  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref ec43e1f295e984e541b8eeaf46f3b3b9decfd258 --branch claude/kimble-rocket-engineering",
+  "branch": "claude/clever-pascal-y4v4d8",
+  "commit": "fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1",
+  "commitDate": "2026-09-30T11:10:27+00:00",
+  "commitSubject": "V2 proof clips, and side-by-sides with V1 at the same mission times",
+  "importedAt": "2026-09-30T11:16:09.532Z",
+  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref fc1d942c755c2bc1559a80c4c3df5864b3ad1cf1 --branch claude/clever-pascal-y4v4d8",
   "excluded": [
     {
       "pattern": "docs/recordings/",
       "why": "verification videos made during development; not part of the app",
-      "files": 26,
-      "bytes": 13228870
+      "files": 43,
+      "bytes": 19501821
     },
     {
       "pattern": "docs/screenshots/",
@@ -24,7 +24,7 @@
       "pattern": "tools/",
       "why": "offline Python pipelines (narration, textures, brand, site bake); their outputs are committed in public/ and src/",
       "files": 32,
-      "bytes": 255621
+      "bytes": 255662
     },
     {
       "pattern": "release/",
