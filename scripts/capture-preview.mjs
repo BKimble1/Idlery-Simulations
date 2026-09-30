@@ -27,8 +27,10 @@
 //           (`during` steps also have the `frame` they happen before)
 //
 // Segments are joined with short cross-fades into preview.mp4 (H.264) and preview.webm (VP9,
-// for browsers without H.264), both without sound. The poster (poster.webp) is the clip's first
-// frame; `og` names a frame for a link-preview image: { "segment", "frame", "out" }, where out
+// for browsers without H.264), both without sound. With "loop": true the clip's end also fades
+// into its beginning (the clip then starts `loopFade` s, default `crossfade`, into its first
+// segment), so the card's looping preview has no cut. The poster (poster.webp) is the clip's
+// first frame; `og` names a frame for a link-preview image: { "segment", "frame", "out" }, where out
 // defaults to site/public/og.jpg, the homepage's (so only one simulation should leave it out).
 // PROVENANCE.md next to the clip records what it was made from: the simulation's source
 // commit, the addresses and steps, the renderer and the date.
@@ -174,7 +176,16 @@ for (let i = 1; i < segs.length; i++) {
   length += segs[i].frames / fps - fade;
   last = next;
 }
-const filter = segs.length > 1 ? `${chain}[v]format=yuv420p[out]` : '[0:v]format=yuv420p[out]';
+let joined = segs.length > 1 ? '[v]' : '[0:v]';
+// a seamless loop: the clip without its first `lf` seconds, fading at its end into those seconds
+const lf = spec.loop ? Math.min(spec.loopFade ?? fade, segs[0].frames / fps / 2, length / 3) : 0;
+if (lf > 0) {
+  chain += `${joined}split=2[lb][lh];[lb]trim=start=${lf.toFixed(3)},setpts=PTS-STARTPTS,fps=${fps}[body];[lh]trim=end=${lf.toFixed(3)},setpts=PTS-STARTPTS,fps=${fps}[head];`;
+  chain += `[body][head]xfade=transition=fade:duration=${lf.toFixed(3)}:offset=${(length - 2 * lf).toFixed(3)}[looped];`;
+  joined = '[looped]';
+  length -= lf;
+}
+const filter = `${chain}${joined}format=yuv420p[out]`;
 const video = join(out, 'preview.mp4');
 const webm = join(out, 'preview.webm');
 const poster = join(out, 'poster.webp');
@@ -198,7 +209,8 @@ ffmpeg([
 ]);
 // The poster is the clip's first picture, so nothing jumps when the video starts (WebP: about
 // half the size of a JPEG of the same quality). Link previews get a JPEG, which all of them read.
-ffmpeg(['-i', join(work, segs[0].name, '00000.png'), '-c:v', 'libwebp', '-quality', '82', poster]);
+const first = String(Math.round(lf * fps)).padStart(5, '0');
+ffmpeg(['-i', join(work, segs[0].name, `${first}.png`), '-c:v', 'libwebp', '-quality', '82', poster]);
 let og = null;
 if (spec.og) {
   const frame = join(work, spec.og.segment, `${String(Math.min(spec.og.frame, segs.find((s) => s.name === spec.og.segment).frames - 1)).padStart(5, '0')}.png`);
@@ -235,7 +247,7 @@ writeFileSync(
     `- **Simulation source**: ${sourceOf()}`,
     `- **Renderer**: Chromium (Playwright) with WebGL on ${renderer ?? 'the same renderer as the frames kept from an earlier run'}${renderer && /swiftshader/i.test(renderer) ? ' (SwiftShader, a software renderer: no GPU)' : ''}`,
     `- **Clock**: ${spec.advance ? `frame-stepped (\`${spec.advance}\` before each frame): every frame is exactly 1/${fps} s of simulation time, whatever the render time` : 'real time'}`,
-    `- **Picture**: ${width} x ${height} at ${fps} fps, ${length.toFixed(2)} s, ${segs.length} segment${segs.length > 1 ? 's' : ''} joined with ${fade.toFixed(2)} s cross-fades, no sound`,
+    `- **Picture**: ${width} x ${height} at ${fps} fps, ${length.toFixed(2)} s, ${segs.length} segment${segs.length > 1 ? 's' : ''} joined with ${fade.toFixed(2)} s cross-fades${lf > 0 ? `, the end fading into the beginning over ${lf.toFixed(2)} s (a seamless loop; the clip starts ${lf.toFixed(2)} s into the first segment)` : ''}, no sound`,
     `- **Files**: preview.mp4 (H.264 High 4.0) ${kb(video)}, preview.webm (VP9) ${kb(webm)}, poster.webp (the first frame) ${kb(poster)}${og ? `, ${relative(root, og)}` : ''}`,
     '',
     '| segment | address | ready, then setup | frames |',
