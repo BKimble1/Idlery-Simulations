@@ -219,7 +219,16 @@ a {
 .card:hover {
   border-color: var(--line-2);
   box-shadow: var(--shadow-2);
-  transform: translateY(-2px);
+}
+/* the lift and the picture's slight zoom only where there is a pointer to hover with: on a touch
+   screen :hover sticks after a tap, so the card would jump up under the finger and stay there */
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-2px);
+  }
+  .card:hover .card__video {
+    transform: scale(1.012);
+  }
 }
 .card:has(.card__launch:focus-visible) {
   outline: 2px solid var(--focus);
@@ -242,9 +251,6 @@ a {
   height: 100%;
   object-fit: cover;
   transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.card:hover .card__video {
-  transform: scale(1.012);
 }
 
 .card__toggle {
