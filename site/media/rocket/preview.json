@@ -28,14 +28,14 @@
     },
     {
       "name": "staging",
-      "about": "High above the Earth from T+148.8 s to T+152.8 s, after main engine cutoff (T+147.4 s): the stages separate (T+151.2 s).",
+      "about": "High above the Earth from T+155.0 s to T+159.5 s: the stages, released at T+151.2 s by pneumatic pushers, drift apart at walking pace, and the upper-stage engine starts (T+158.2 s).",
       "path": "?v=mission&m=leo",
       "setup": [
-        { "eval": "window.__rocketSeekMission(148.8)" },
+        { "eval": "window.__rocketSeekMission(155.0)" },
         { "advance": 20 },
-        { "eval": "window.__rocketSeekMission(148.8); window.__rocketPlayback.player.setRate?.(1); window.__rocketPlayback.player.play()" }
+        { "eval": "window.__rocketSeekMission(155.0); window.__rocketPlayback.player.setRate?.(1); window.__rocketPlayback.player.play()" }
       ],
-      "frames": 120
+      "frames": 135
     }
   ]
 }
