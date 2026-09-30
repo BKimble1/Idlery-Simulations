@@ -1,0 +1,79 @@
+{
+  "about": "Shot list for the homepage preview (scripts/capture-preview.mjs). Each segment opens Humanoid at a deep link, as a visitor would, and renders frames on its frame-stepped clock (?virt=1). Setup frames are simulated without drawing (__fabAdvance(n, false)).",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "dpr": 1
+  },
+  "fps": 30,
+  "crossfade": 0.4,
+  "crf": 26,
+  "crfVp9": 43,
+  "query": "virt=1&capture=1&quality=high",
+  "ready": "!!window.__fabAdvance && !!window.__fab && window.__fabStores.useApp.getState().ready",
+  "advance": "window.__fabAdvance(1)",
+  "segments": [
+    {
+      "name": "intro",
+      "about": "FO-H1 standing in the dark test lab, alive: balance sway, gaze, the slow camera.",
+      "path": "",
+      "setup": [
+        {
+          "eval": "window.__fabAdvance(60, false)"
+        }
+      ],
+      "frames": 60
+    },
+    {
+      "name": "actuator",
+      "about": "The knee actuator slides out of the thigh and separates into its parts while running a walking duty cycle.",
+      "path": "?mode=explore&system=actuators",
+      "setup": [
+        {
+          "eval": "window.__fabAdvance(110, false)"
+        },
+        {
+          "eval": "window.__fabStores.useApp.getState().go({ exploded: true })"
+        },
+        {
+          "eval": "window.__fabAdvance(4, false)"
+        }
+      ],
+      "frames": 120
+    },
+    {
+      "name": "walk",
+      "about": "Walking on the instrumented treadmill, ground reactions and the centre of mass shown.",
+      "path": "?mode=simulate&lab=walk",
+      "setup": [
+        {
+          "eval": "window.__fabAdvance(60, false)"
+        },
+        {
+          "eval": "window.__fabStores.useLab.getState().set({ walking: true, gait: 'normal' })"
+        },
+        {
+          "eval": "window.__fabAdvance(150, false)"
+        }
+      ],
+      "frames": 90
+    },
+    {
+      "name": "push",
+      "about": "A 300 N push: the capture point leaves the feet and a step catches it.",
+      "path": "?mode=simulate&lab=balance",
+      "setup": [
+        {
+          "eval": "window.__fabAdvance(90, false)"
+        },
+        {
+          "eval": "window.__fabStores.useLab.getState().set({ pushForce: 300, pushDir: 'front' }); window.__fab.balance.queuePush(300, 'front')"
+        },
+        {
+          "eval": "window.__fabAdvance(2, false)"
+        }
+      ],
+      "frames": 75
+    }
+  ]
+}

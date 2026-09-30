@@ -7,6 +7,7 @@ you run in the browser, at its own address, with a card on the homepage.
 | address | what it is | source |
 |---|---|---|
 | `/` | the FAB / ONE homepage | [`site/`](site/) |
+| [`/humanoid`](https://simulations.idlery.com/humanoid) | **Humanoid** — inside a machine built to move like us | [`simulations/humanoid/`](simulations/humanoid/) |
 | [`/photolithography`](https://simulations.idlery.com/photolithography) | **Photolithography** — build a chip, layer by layer | [`simulations/photolithography/`](simulations/photolithography/) |
 
 The homepage is plain HTML and CSS with a few lines of script for the preview videos: it
@@ -44,8 +45,9 @@ npm run serve          # dist/ at http://127.0.0.1:8888, routed as Netlify route
 | `npm run serve` | serves `dist/` like Netlify: forced rewrites, trailing slashes, headers, `404.html`, ranges |
 | `npm run dev` | the homepage alone with hot reload (the cards link to routes this server does not have) |
 | `npm test` | every simulation's unit tests |
-| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and Photolithography at its route |
+| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and each simulation at its route |
 | `npm run e2e:photolithography` | Photolithography's own browser suite at `/photolithography` on the built site (long: see its README) |
+| `npm run e2e:humanoid` | Humanoid's own browser suite at `/humanoid` on the built site (desktop, laptop, tablet and phone) |
 | `npm run typecheck` | types of the homepage, its build config and the site's tests |
 | `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm` and `poster.webp` (and `site/public/og.jpg`) from the built site |
 | `npm run package` | `release/fab-one-site.zip`: the contents of `dist/`, with `index.html` at the top level |
@@ -141,3 +143,10 @@ branch `claude/fab-one-round-four-realism-x1ze0a`, at
 file unchanged into `simulations/photolithography/` (`git log --follow` reaches the earlier
 commits). What changed afterwards to run it at `/photolithography` is described in
 [its README](simulations/photolithography/README.md#inside-fab--one).
+
+Humanoid was built for FAB / ONE in
+[BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation), branch
+`claude/fab-one-humanoid`, and copied into `simulations/humanoid/` from there (its tracked
+files, without history); see [its README](simulations/humanoid/README.md) and
+[engineering reference](simulations/humanoid/docs/ENGINEERING.md). Its own browser suite runs at
+the route with `npm run e2e:humanoid`.

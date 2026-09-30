@@ -2,6 +2,14 @@ import { expect, test, type Locator } from '@playwright/test';
 import simulations from '../simulations.config.mjs';
 import { overflow, watchErrors } from './helpers';
 
+/**
+ * Waits for a card's hover lift to finish. Playwright retries a click on a moving button and,
+ * on later tries, scrolls it to the top of the window, taking the preview off screen, where it
+ * rightly stays paused.
+ */
+const still = (card: Locator) =>
+  card.evaluate((el) => Promise.all(el.getAnimations({ subtree: true }).filter((a) => a.effect?.getTiming().iterations !== Infinity).map((a) => a.finished)));
+
 const state = (video: Locator) =>
   video.evaluate((v: HTMLVideoElement) => ({ t: v.currentTime, paused: v.paused, muted: v.muted, loop: v.loop, inline: v.playsInline, w: v.videoWidth, h: v.videoHeight, src: v.currentSrc }));
 
@@ -63,10 +71,12 @@ test('each preview shows a real poster, then plays muted in place; it can be pau
     expect(await state(video)).toMatchObject({ paused: false, muted: true, loop: true, inline: true, w: 1280, h: 720 });
     // the visitor can pause it (the button does not open the simulation) and play it again
     if (!isMobile) await card.hover();
+    await still(card);
     await card.getByRole('button', { name: 'Pause the preview' }).click();
     await expect(card.getByRole('button', { name: 'Play the preview' })).toBeVisible();
     expect((await state(video)).paused).toBe(true);
     expect(new URL(page.url()).pathname).toBe('/');
+    await still(card);
     await card.getByRole('button', { name: 'Play the preview' }).click();
     await expect.poll(async () => (await state(video)).paused).toBe(false);
   }

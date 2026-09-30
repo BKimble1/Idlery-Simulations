@@ -34,6 +34,23 @@ export const site = {
 /** @type {Simulation[]} */
 export default [
   {
+    slug: 'humanoid',
+    title: 'Humanoid',
+    tagline: 'Inside a machine built to move like us.',
+    field: 'Robotics',
+    summary:
+      'Open up FO-H1, an original electric humanoid, system by system: its actuators, hands, vision, balance and battery. Change its design and watch the limits move, then run its joints, balance, walking and hands in seven live labs.',
+    facts: ['29 actuated joints', '7 live labs', 'Guided tour'],
+    launch: 'Launch simulation',
+    featured: true,
+    preview: {
+      mp4: 'media/humanoid/preview.mp4',
+      webm: 'media/humanoid/preview.webm',
+      poster: 'media/humanoid/poster.webp',
+      alt: 'Recorded in the simulation: FO-H1 standing in its test lab; its knee actuator slides out of the thigh and separates into motor, cycloidal reducer and bearings while it runs; the robot walks on the instrumented treadmill with its ground reactions shown; and it catches a push with a step.',
+    },
+  },
+  {
     slug: 'photolithography',
     title: 'Photolithography',
     tagline: 'Build a chip, layer by layer.',
