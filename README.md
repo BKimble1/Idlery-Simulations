@@ -116,12 +116,13 @@ forced rule avoids). The rules were also checked with Netlify's own parsers and 
 The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONOS.
 
 1. `npm run build && npm run package` makes `release/fab-one-site.zip`. Unzip it: the folder
-   you get has `index.html`, `404.html`, `_redirects`, `_headers`, `assets/` and
+   you get has `index.html`, `404.html`, `_redirects`, `_headers`, `assets/`, `humanoid/` and
    `photolithography/` at its top level. Upload that folder, not a folder around it.
 2. In Netlify: for a new project, **Add new project → Deploy manually** and drop the folder;
    to update an existing one, open its **Deploys** page and drop the folder onto the upload
-   area at the bottom. The deploy summary should report 1 redirect rule and 3 header rules.
-   Check `https://<project-name>.netlify.app/` and `/photolithography` (also refreshed).
+   area at the bottom. The deploy summary should report 2 redirect rules and 4 header rules.
+   Check `https://<project-name>.netlify.app/`, `/humanoid` and `/photolithography` (also
+   refreshed).
 3. **Domain management → Add a domain → Add a domain you already own**, enter
    `simulations.idlery.com`, **Verify**, then add it. Netlify shows it as waiting for DNS.
 4. At IONOS: **Domains & SSL**, the gear icon next to `idlery.com` → **DNS** →
