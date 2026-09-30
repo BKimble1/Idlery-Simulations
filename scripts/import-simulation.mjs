@@ -201,7 +201,8 @@ try {
     commitDate,
     commitSubject: subject,
     importedAt: new Date().toISOString(),
-    command: `node scripts/import-simulation.mjs ${slug} --repo ${repository ?? repoArg} --ref ${branch ?? commit}`,
+    // this exact tree again (with --ref <branch> instead: the branch as it is then)
+    command: `node scripts/import-simulation.mjs ${slug} --repo ${repository ?? repoArg} --ref ${commit}${branch ? ` --branch ${branch}` : ''}`,
     excluded: excluded.map(({ pattern, why, files, bytes }) => ({ pattern, why, files, bytes })),
   };
   writeFileSync(join(stage, 'SOURCE.json'), JSON.stringify(source, null, 2) + '\n');

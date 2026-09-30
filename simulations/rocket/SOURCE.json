@@ -5,8 +5,8 @@
   "commit": "ec43e1f295e984e541b8eeaf46f3b3b9decfd258",
   "commitDate": "2026-09-30T04:51:05+00:00",
   "commitSubject": "Telemetry: felt acceleration from the reference trajectory, so it holds while paused",
-  "importedAt": "2026-09-30T05:07:40.215Z",
-  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref claude/kimble-rocket-engineering",
+  "importedAt": "2026-09-30T06:28:25.339Z",
+  "command": "node scripts/import-simulation.mjs rocket --repo https://github.com/BKimble1/rocket-simulation --ref ec43e1f295e984e541b8eeaf46f3b3b9decfd258 --branch claude/kimble-rocket-engineering",
   "excluded": [
     {
       "pattern": "docs/recordings/",
