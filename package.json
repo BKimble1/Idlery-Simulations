@@ -18,6 +18,7 @@
     "e2e:photolithography": "node scripts/simulation-e2e.mjs photolithography",
     "capture-preview": "node scripts/capture-preview.mjs",
     "package": "node scripts/package.mjs",
+    "verify-package": "node scripts/verify-package.mjs",
     "import-simulation": "node scripts/import-simulation.mjs"
   },
   "devDependencies": {

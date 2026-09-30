@@ -2,11 +2,12 @@
 // Zips the built site for a manual Netlify upload: index.html, _redirects and _headers at the
 // ZIP's top level, each simulation in its folder.
 //
-//   npm run build && node scripts/package.mjs [out.zip]      (npm run package)
+//   npm run build && node scripts/package.mjs [out.zip | --name <name>]      (npm run package)
+//   npm run package -- --name FAB-ONE-with-Rocket-V2-Netlify     → release/FAB-ONE-with-Rocket-V2-Netlify.zip
 //
-// Default output: release/fab-one-site.zip. Unzip it and drag the folder onto the site's
-// Deploys page in Netlify (README.md, "Publishing"). Written with Node's own zlib, so it needs
-// no zip program.
+// Default output: release/fab-one-site.zip. Check it with scripts/verify-package.mjs, then
+// unzip it and drag the folder onto the site's Deploys page in Netlify (README.md,
+// "Publishing"). Written with Node's own zlib, so it needs no zip program.
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { crc32, deflateRawSync } from 'node:zlib';
@@ -14,9 +15,15 @@ import simulations from '../simulations.config.mjs';
 
 const root = join(import.meta.dirname, '..');
 const dist = join(root, 'dist');
-const out = resolve(process.argv[2] ?? join(root, 'release', 'fab-one-site.zip'));
+const args = process.argv.slice(2);
+const named = args.indexOf('--name');
+if (named >= 0 && !/^[\w.-]+$/.test(args[named + 1] ?? '')) {
+  console.error('usage: node scripts/package.mjs [out.zip | --name <name>]  (a name: letters, digits, dots, hyphens, underscores)');
+  process.exit(2);
+}
+const out = named >= 0 ? join(root, 'release', `${args[named + 1].replace(/\.zip$/, '')}.zip`) : resolve(args[0] ?? join(root, 'release', 'fab-one-site.zip'));
 
-const required = ['index.html', '404.html', '_redirects', '_headers', ...simulations.map((s) => `${s.slug}/index.html`)];
+const required = ['index.html', '404.html', '_redirects', '_headers', 'sitemap.xml', 'robots.txt', ...simulations.flatMap((s) => [`${s.slug}/index.html`, s.preview.mp4, s.preview.webm, s.preview.poster].map((f) => f.replace(/^media\/([^/]+)\/.*$/, 'media/$1')))];
 for (const f of required) {
   try {
     statSync(join(dist, f));
@@ -95,3 +102,4 @@ end.writeUInt32LE(offset, 16);
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, Buffer.concat([...chunks, cd, end]));
 console.log(`${relative(root, out)}: ${files.length} files, ${(statSync(out).size / 1e6).toFixed(2)} MB (index.html at the top level)`);
+console.log(`Check it: node scripts/verify-package.mjs ${relative(root, out)}`);
