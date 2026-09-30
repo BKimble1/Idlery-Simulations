@@ -9,6 +9,7 @@ you run in the browser, at its own address, with a card on the homepage.
 | `/` | the FAB / ONE homepage | [`site/`](site/) |
 | [`/photolithography`](https://simulations.idlery.com/photolithography) | **01 Photolithography**: build a chip, layer by layer | [`simulations/photolithography/`](simulations/photolithography/), kept in this repository |
 | [`/rocket`](https://simulations.idlery.com/rocket) | **02 Rocket Engineering** (KIMBLE): from the launch pad to orbit | [`simulations/rocket/`](simulations/rocket/), imported from [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation) (see [its SOURCE.json](simulations/rocket/SOURCE.json)) |
+| [`/humanoid`](https://simulations.idlery.com/humanoid) | **03 Humanoid**: inside a machine built to move like us | [`simulations/humanoid/`](simulations/humanoid/), imported from [BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation) (see [its SOURCE.json](simulations/humanoid/SOURCE.json)) |
 
 The homepage is plain HTML and CSS with a few lines of script for the preview videos: it
 loads none of a simulation's code, which is downloaded only when a visitor opens it. Each
@@ -52,8 +53,9 @@ npm run serve          # dist/ at http://127.0.0.1:8888, routed as Netlify route
 | `npm run serve` | serves `dist/` like Netlify: forced rewrites, trailing slashes, headers, `404.html`, ranges |
 | `npm run dev` | the homepage alone with hot reload (the cards link to routes this server does not have) |
 | `npm test` | every simulation's unit tests |
-| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, Photolithography and Rocket Engineering at their routes |
+| `npm run e2e` | the site's browser tests (builds and serves first): homepage, previews, routing, and Photolithography, Rocket Engineering and Humanoid at their routes |
 | `npm run e2e:photolithography` | Photolithography's own browser suite at `/photolithography` on the built site (long: see its README) |
+| `npm run e2e:humanoid` | Humanoid's own browser suite at `/humanoid` on the built site (desktop, laptop, tablet and phone) |
 | `npm run typecheck` | types of the homepage, its build config and the site's tests |
 | `npm run capture-preview -- <slug>` | records `site/media/<slug>/preview.mp4`, `preview.webm`, `poster.webp` and `PROVENANCE.md` from the built site (Photolithography's also makes `site/public/og.jpg`, the homepage's link-preview image) |
 | `npm run import-simulation -- <slug> --repo <path or URL> --ref <ref>` | replaces `simulations/<slug>/` with that commit of its repository (see "Rocket Engineering" below) |
@@ -72,6 +74,7 @@ build writes one rule per simulation into `dist/_redirects`:
 ```
 /photolithography  /photolithography/index.html  200!
 /rocket  /rocket/index.html  200!
+/humanoid  /humanoid/index.html  200!
 ```
 
 A forced (`!`) rewrite (`200`) serves that page at `/photolithography` itself, and, because
@@ -98,15 +101,17 @@ the base. The homepage's own files are in `dist/assets/` and its preview clips i
 Photolithography's *Save for offline* uses a service worker at `/photolithography/sw.js`.
 `_headers` sends `Service-Worker-Allowed: /photolithography` with it, so it can control the
 route's own address (without the slash); it caches and answers only that simulation, never
-the homepage.
+the homepage or the other simulations (`e2e/humanoid.spec.ts` installs it and checks that `/`,
+`/rocket` and `/humanoid` stay outside it).
 
 `scripts/serve.mjs` reproduces these rules for local use and the tests, including Netlify's
 default of redirecting `/about` to `/about/` when only `about/index.html` exists (which the
 forced rule avoids). The rules were also checked with Netlify's own parsers and matcher
-(`@netlify/redirect-parser`, `@netlify/headers-parser`, `netlify-redirector`): with the rocket,
-2 redirect rules and 7 header rules parse without errors; `/rocket`, `/rocket/` and
-`/rocket?v=mission&m=leo` match the forced rule, and `/rocket/assets/missing.js` and
-`/rocket/index.html` match none (they are files, or 404s).
+(`@netlify/redirect-parser`, `@netlify/headers-parser`, `netlify-redirector`): with the three
+simulations, 3 redirect rules and 8 header rules parse without errors; `/rocket`, `/rocket/`,
+`/rocket?v=mission&m=leo`, `/humanoid`, `/humanoid/` and `/humanoid?mode=simulate&lab=walk`
+match their forced rule, and `/rocket/assets/missing.js`, `/humanoid/assets/missing.js`,
+`/rocket/index.html` and `/humanoid/index.html` match none (they are files, or 404s).
 
 ## Adding a simulation
 
@@ -138,7 +143,8 @@ forced rule avoids). The rules were also checked with Netlify's own parsers and 
    `npm run capture-preview -- <slug>`. The clip is taken from the built site, so it shows
    what visitors will see. Frame-stepped rendering needs an `advance` hook like
    Photolithography's or the rocket's `?virt=1`; without one, frames are taken in real time.
-   Try the shot list first with a short test render somewhere else:
+   With `"loop": true` in the shot list the clip's end also fades into its beginning, so the
+   card's looping preview has no cut (Humanoid's does). Try the shot list first with a short test render somewhere else:
    `npm run capture-preview -- <slug> --frames=6 --out=/tmp/preview-test`.
 6. `npm run build`, `npm run e2e` (the tests read the config, so the new card and route are
    covered), then publish.
@@ -206,6 +212,35 @@ npm run capture-preview -- rocket       # site/media/rocket/preview.mp4, preview
 npm run build                           # the homepage with the new clip
 ```
 
+## Humanoid
+
+Humanoid (FO-H1, an original electric humanoid designed for the simulation; not a real
+robot) is developed in [BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation)
+and imported the same way as the rocket, with `scripts/import-simulation.mjs` (one commit, no
+history, `docs/recordings/` left out). Nothing in `simulations/humanoid/` is edited here. The
+current import is V2, `f861fffb4ee6aad407422cd78db620a41b28c2c0` (2026-09-30, branch `claude/humanoid-v2`, which builds on V1's
+`claude/fab-one-humanoid` at `f5fa839`); see [its SOURCE.json](simulations/humanoid/SOURCE.json).
+
+```bash
+npm run import-simulation -- humanoid --repo https://github.com/BKimble1/humanoid-simulation --ref <commit> --branch claude/humanoid-v2
+npm run build && npm run e2e && npm run e2e:humanoid
+```
+
+**How it is built.** Its build script is `tsc -b && vite build`, so the default build command
+works (npm appends `--base /humanoid/ --outDir … --emptyOutDir` to `vite build`), and it reads
+`VITE_FABONE_HOME` for its "Back to FAB / ONE" link. It registers no service worker and keeps
+no browser storage; everything it loads is under `/humanoid/` (checked by the build and by
+`e2e/humanoid.spec.ts`, which also installs Photolithography's worker and checks that `/`,
+`/rocket` and `/humanoid` stay outside it).
+
+**Its own tests** run at the route with `npm run e2e:humanoid` (the simulation's Playwright
+suites, including its continuity, Watch and camera tests, against the built site).
+
+**Its preview** is recorded from the built site on its frame-stepped clock
+(`?virt=1&capture=1&quality=high`), from [`site/media/humanoid/preview.json`](site/media/humanoid/preview.json),
+and loops without a cut (`"loop": true`); see
+[`site/media/humanoid/PROVENANCE.md`](site/media/humanoid/PROVENANCE.md).
+
 ## Publishing
 
 The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONOS.
@@ -214,21 +249,22 @@ The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONO
 
    ```bash
    npm run build
-   npm run package -- --name FAB-ONE-with-Rocket-V2-Netlify    # release/FAB-ONE-with-Rocket-V2-Netlify.zip
-   npm run verify-package -- release/FAB-ONE-with-Rocket-V2-Netlify.zip
+   npm run package -- --name FAB_ONE_Humanoid_V2_Netlify    # release/FAB_ONE_Humanoid_V2_Netlify.zip
+   npm run verify-package -- release/FAB_ONE_Humanoid_V2_Netlify.zip
    ```
 
    (`npm run package` alone makes `release/fab-one-site.zip`.) The check unzips the package
    into an empty temporary folder, serves it with Netlify's rules, and asks for every route
    and every file the pages load. Unzip the package: the folder you get has `index.html`,
    `404.html`, `_redirects`, `_headers`, `sitemap.xml`, `robots.txt`, `assets/`, `media/`,
-   `photolithography/` and `rocket/` at its top level. Upload that folder, not a folder
+   `photolithography/`, `rocket/` and `humanoid/` at its top level. Upload that folder, not a folder
    around it.
 2. In Netlify: for a new project, **Add new project → Deploy manually** and drop the folder;
    to update an existing one, open its **Deploys** page and drop the folder onto the upload
-   area at the bottom. The deploy summary should report 2 redirect rules and 7 header rules.
-   Check `https://<project-name>.netlify.app/`, `/photolithography` and `/rocket` (also
-   refreshed, and a deep link such as `/rocket?v=mission&m=leo`).
+   area at the bottom. The deploy summary should report 3 redirect rules and 8 header rules.
+   Check `https://<project-name>.netlify.app/`, `/photolithography`, `/rocket` and `/humanoid`
+   (also refreshed, and deep links such as `/rocket?v=mission&m=leo` and
+   `/humanoid?mode=simulate&lab=walk`).
 3. **Domain management → Add a domain → Add a domain you already own**, enter
    `simulations.idlery.com`, **Verify**, then add it. Netlify shows it as waiting for DNS.
 4. At IONOS: **Domains & SSL**, the gear icon next to `idlery.com` → **DNS** →
@@ -242,6 +278,12 @@ The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONO
    records, one of them must allow `letsencrypt.org`.
 
 ## Provenance
+
+Humanoid is imported from
+[BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation): the commit, its
+branch and date, and what was left out are in
+[`simulations/humanoid/SOURCE.json`](simulations/humanoid/SOURCE.json); its card preview's
+origin is in [`site/media/humanoid/PROVENANCE.md`](site/media/humanoid/PROVENANCE.md).
 
 Rocket Engineering is imported from
 [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation): the commit, its

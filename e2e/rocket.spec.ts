@@ -22,14 +22,15 @@ async function shell(page: Page) {
 
 test.describe.configure({ timeout: 600_000 });
 
-test('the homepage lists Photolithography, then Rocket Engineering as 02, as matching rows', async ({ page }, info) => {
+test('the homepage lists Photolithography, then Rocket Engineering as 02, then Humanoid, as matching rows', async ({ page }, info) => {
   const errors = watchErrors(page);
   await page.goto('/');
   const cards = page.locator('article.card');
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(cards.nth(0).getByRole('heading', { level: 3 })).toHaveText('Photolithography');
   await expect(cards.nth(1).getByRole('heading', { level: 3 })).toHaveText('Rocket Engineering');
-  expect(simulations.map((s) => s.slug)).toEqual(['photolithography', 'rocket']);
+  await expect(cards.nth(2).getByRole('heading', { level: 3 })).toHaveText('Humanoid');
+  expect(simulations.map((s) => s.slug)).toEqual(['photolithography', 'rocket', 'humanoid']);
 
   const card = cards.nth(1);
   // "02 · AEROSPACE ENGINEERING": the number is the card's place, the field is set in capitals
@@ -47,7 +48,7 @@ test('the homepage lists Photolithography, then Rocket Engineering as 02, as mat
   await expect(launch).toHaveText('Launch simulation');
   expect(await card.innerText(), 'no em dashes in the card').not.toContain('—');
 
-  // the two cards are alike: full width, one above the other; on wide screens the preview is on
+  // the cards are alike: full width, one above the other; on wide screens the preview is on
   // the left of the text, on phones above it
   const boxes = await cards.evaluateAll((els) =>
     els.map((el) => {
@@ -60,8 +61,10 @@ test('the homepage lists Photolithography, then Rocket Engineering as 02, as mat
   );
   const wrap = await page.locator('.cards').evaluate((el) => el.getBoundingClientRect().width);
   for (const b of boxes) expect(Math.abs(b.width - wrap)).toBeLessThan(1);
-  expect(boxes[1].top).toBeGreaterThan(boxes[0].bottom);
-  expect(boxes[0].left).toBeCloseTo(boxes[1].left, 0);
+  for (let i = 1; i < boxes.length; i++) {
+    expect(boxes[i].top).toBeGreaterThan(boxes[i - 1].bottom);
+    expect(boxes[i].left).toBeCloseTo(boxes[0].left, 0);
+  }
   if (info.project.name === 'desktop') {
     for (const b of boxes) {
       expect(b.media.right).toBeLessThanOrEqual(b.body.left + 1);
