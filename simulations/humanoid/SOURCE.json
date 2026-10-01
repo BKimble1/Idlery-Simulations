@@ -2,17 +2,17 @@
   "about": "Where simulations/humanoid/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
   "repository": "https://github.com/BKimble1/humanoid-simulation",
   "branch": "claude/humanoid-v2",
-  "commit": "f861fffb4ee6aad407422cd78db620a41b28c2c0",
-  "commitDate": "2026-09-30T20:39:51+00:00",
-  "commitSubject": "No snaps in stepping, recovery or tour framing: found by playing the whole tour with telemetry",
-  "importedAt": "2026-09-30T20:40:17.151Z",
-  "command": "node scripts/import-simulation.mjs humanoid --repo https://github.com/BKimble1/humanoid-simulation --ref f861fffb4ee6aad407422cd78db620a41b28c2c0 --branch claude/humanoid-v2",
+  "commit": "400ddb744393b90eff9b0443a97315cfa8fea53f",
+  "commitDate": "2026-10-01T00:17:58+00:00",
+  "commitSubject": "V2 release note, recordings and measurements (documents only)",
+  "importedAt": "2026-10-01T00:18:13.664Z",
+  "command": "node scripts/import-simulation.mjs humanoid --repo https://github.com/BKimble1/humanoid-simulation --ref 400ddb744393b90eff9b0443a97315cfa8fea53f --branch claude/humanoid-v2",
   "excluded": [
     {
       "pattern": "docs/recordings/",
       "why": "verification videos made during development; not part of the app",
-      "files": 16,
-      "bytes": 9588316
+      "files": 48,
+      "bytes": 35672588
     },
     {
       "pattern": "docs/screenshots/",

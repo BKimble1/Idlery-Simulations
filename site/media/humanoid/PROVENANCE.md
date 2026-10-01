@@ -16,3 +16,9 @@ Recorded by `node scripts/capture-preview.mjs humanoid` on 2026-09-30 20:41 UTC,
 | push | `/humanoid?mode=simulate&lab=balance&virt=1&capture=1&quality=high` | `{"eval":"window.__fabAdvance(90, false)"}`, `{"eval":"window.__fabStores.useLab.getState().set({ pushForce: 300, pushDir: 'front' }); window.__fab.balance.queuePush(300, 'front')"}`, `{"eval":"window.__fabAdvance(2, false)"}` | 75 (2.50 s) |
 
 Ready: `"!!window.__fabAdvance && !!window.__fab && window.__fabStores.useApp.getState().ready"`
+
+**Later import.** `simulations/humanoid/` is now `400ddb7` (see its SOURCE.json). Its code is
+`2ab9418`, one commit after `f861fff`, which moves the first framing of the page's layout to
+before the page is seen; `400ddb7` adds documents only. Each segment above runs 60 or more
+frames of setup before its first recorded frame, so none of the clip's frames change; it was
+not recorded again.

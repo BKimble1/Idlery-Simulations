@@ -218,7 +218,7 @@ Humanoid (FO-H1, an original electric humanoid designed for the simulation; not 
 robot) is developed in [BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation)
 and imported the same way as the rocket, with `scripts/import-simulation.mjs` (one commit, no
 history, `docs/recordings/` left out). Nothing in `simulations/humanoid/` is edited here. The
-current import is V2, `f861fffb4ee6aad407422cd78db620a41b28c2c0` (2026-09-30, branch `claude/humanoid-v2`, which builds on V1's
+current import is V2, `400ddb744393b90eff9b0443a97315cfa8fea53f` (2026-10-01, branch `claude/humanoid-v2`, which builds on V1's
 `claude/fab-one-humanoid` at `f5fa839`); see [its SOURCE.json](simulations/humanoid/SOURCE.json).
 
 ```bash
