@@ -5,13 +5,15 @@
  */
 import { useEffect, useState } from 'react';
 import { useApp, useReadouts } from '../../state/store';
-import { FAULTS, FAULT_BY_ID, SCENARIOS, SCENARIO_BY_ID, type FaultCase } from '../../content/scenarios';
+import { FAULTS, FAULT_BY_ID, SCENARIOS, SCENARIO_BY_ID, WORKBENCH, type FaultCase } from '../../content/scenarios';
+import { Workbench } from './Workbench';
 import { BY_ID } from '../../content/registry';
 import { NO_FAULTS } from '../../sim/car';
 import type { World } from '../../world/world';
+import { SheetHandle, useSheet } from '../Sheet';
 import { viewFor } from '../../world/partViews';
 import { VIEWS } from '../../world/views';
-import { READOUTS } from '../Readouts';
+import { READOUTS, RunPace } from '../Readouts';
 import { runScenario } from './run';
 
 const LAMPS: { key: 'engine' | 'oil' | 'battery' | 'temp' | 'abs' | 'brake'; label: string; red?: boolean }[] = [
@@ -69,12 +71,14 @@ function Diagnose({ f, world }: { f: FaultCase; world: World }) {
   const [seen, setSeen] = useState<string[]>([]);
   const [choice, setChoice] = useState<string | null>(null);
   const [repaired, setRepaired] = useState(false);
-  useEffect(() => {
+  // a new case starts clean; looking at parts (view changes) keeps the progress
+  const restart = () => {
     setStep(0);
     setSeen([]);
     setChoice(null);
     setRepaired(false);
-  }, [f]);
+  };
+  useEffect(restart, [f]);
   const right = f.causes.find((c) => c.right)!;
   const picked = f.causes.find((c) => c.id === choice);
   return (
@@ -176,15 +180,27 @@ function Diagnose({ f, world }: { f: FaultCase; world: World }) {
             className="pbtn pbtn--wide pbtn--accent"
             disabled={repaired}
             onClick={() => {
-              world.model.faults = { ...NO_FAULTS };
-              if (world.live) world.live = { ...world.live, setup: undefined };
+              // the fault is cleared on the running car; temperatures, pressures and charge
+              // recover from where they are, as they would after a real repair
+              world.repair({ ...NO_FAULTS }, f.repairState ?? {});
               setRepaired(true);
             }}
           >
             {repaired ? 'Repaired: watch the gauges recover' : 'Repair it'}
           </button>
+          {repaired && <p className="ex-hint">{f.id === 'overheat' ? 'The thermostat now opens: the temperature falls over the next minute as coolant reaches the radiator.' : 'The live values above are the repaired car’s.'}</p>}
         </>
       )}
+      <button
+        className="pbtn pbtn--wide pbtn--text"
+        onClick={() => {
+          runScenario(world, f.id, f.program);
+          restart();
+          look(world, f.view);
+        }}
+      >
+        Restart this case
+      </button>
     </>
   );
 }
@@ -194,13 +210,26 @@ export function SimulatePanel({ world }: { world: World }) {
   const go = useApp((s) => s.go);
   const sc = id ? SCENARIO_BY_ID[id] : null;
   const fault = id ? FAULT_BY_ID[id] : null;
+  const sheet = useSheet();
+  if (id === WORKBENCH.id)
+    return (
+      <aside className={`panel panel--right eng sim wb pe ${sheet.className}`} style={sheet.style && { ...sheet.style, height: 'auto', maxHeight: '34dvh', bottom: 'calc(110px + var(--safe-b))' }} data-occludes="right" aria-label="Drive it yourself">
+        <SheetHandle />
+        <Workbench world={world} />
+      </aside>
+    );
   return (
-    <aside className="panel panel--right eng sim pe" data-occludes="right" aria-label="Simulate">
+    <aside className={`panel panel--right eng sim pe ${sheet.className}`} style={sheet.style} data-occludes="right" aria-label="Simulate">
+      <SheetHandle />
       {!sc && !fault ? (
         <>
           <h2>Simulate</h2>
-          <p>Drive the car through everyday situations, or diagnose a fault the way a technician would.</p>
-          <h3>Drive</h3>
+          <p>Drive the car yourself, watch it in everyday situations, or diagnose a fault the way a technician would.</p>
+          <button className="ex-row ex-row--feature" onClick={() => go({ scenario: WORKBENCH.id })}>
+            <span className="ex-row__name">{WORKBENCH.title}</span>
+            <span className="ex-row__fn">{WORKBENCH.summary}</span>
+          </button>
+          <h3>Watch it drive</h3>
           <ul className="ex-list">
             {SCENARIOS.map((s) => (
               <li key={s.id}>
@@ -232,6 +261,7 @@ export function SimulatePanel({ world }: { world: World }) {
             <span className="eng-kicker">{sc ? 'Drive' : 'Diagnose'}</span>
           </div>
           <h2>{sc?.title ?? fault!.title}</h2>
+          <RunPace />
           {sc ? (
             <>
               <p className="ex-fn">{sc.summary}</p>
@@ -239,7 +269,7 @@ export function SimulatePanel({ world }: { world: World }) {
               <p className="ex-compare">
                 <b>Watch for.</b> {sc.watch}
               </p>
-              <button className="pbtn pbtn--wide" onClick={() => runScenario(world, sc.program)}>
+              <button className="pbtn pbtn--wide" onClick={() => runScenario(world, sc.id, sc.program)}>
                 Start again
               </button>
             </>

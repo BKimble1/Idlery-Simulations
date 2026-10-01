@@ -10,6 +10,7 @@ import './styles/app.css';
 import { Header } from './ui/Header';
 import { Intro } from './ui/Intro';
 import { Modes } from './ui/Modes';
+import { PanelBoundary } from './ui/PanelBoundary';
 import { Notices } from './ui/Notices';
 import { Legend } from './ui/Legend';
 import { Info } from './ui/Info';
@@ -22,7 +23,10 @@ function webglAvailable(): boolean {
   if (new URLSearchParams(location.search).get('nowebgl') === '1') return false;
   try {
     const c = document.createElement('canvas');
-    return !!c.getContext('webgl2');
+    const gl = c.getContext('webgl2');
+    // a probe only: give its context back at once (browsers cap how many may live)
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return !!gl;
   } catch {
     return false;
   }
@@ -95,6 +99,17 @@ function Veil() {
   );
 }
 
+/** Back to the directed framing: shown only while the visitor has moved the camera away. */
+function Recentre({ world }: { world: World }) {
+  const off = useApp((s) => s.camOff);
+  if (!off) return null;
+  return (
+    <button className="recentre pe" onClick={() => world.camera.recenter()} aria-label="Recentre the view" title="Recentre the view (Home)">
+      Recentre
+    </button>
+  );
+}
+
 function NoWebGL() {
   const home = import.meta.env.VITE_FABONE_HOME;
   return (
@@ -115,6 +130,11 @@ function App() {
   const progress = useApp((s) => s.progress);
   const [world, setWorld] = useState<World | null>(null);
   const [gl] = useState(webglAvailable);
+  const reduced = useApp((s) => s.reducedMotion);
+  // reduced motion (the system setting or the switch in Info) also quiets the interface
+  useEffect(() => {
+    document.documentElement.classList.toggle('reduced', reduced);
+  }, [reduced]);
   useFreeArea(world);
   useNarration(world);
   if (!gl) return <NoWebGL />;
@@ -124,8 +144,13 @@ function App() {
       <div className="ui">
         {ready && <Header />}
         {ready && mode === 'intro' && <Intro />}
-        {ready && world && <Modes world={world} />}
+        {ready && world && (
+          <PanelBoundary resetKey={`${mode}`}>
+            <Modes world={world} />
+          </PanelBoundary>
+        )}
         <Notices />
+        {ready && world && <Recentre world={world} />}
         {ready && <Legend />}
         {ready && <Info />}
       </div>

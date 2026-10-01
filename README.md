@@ -257,7 +257,7 @@ narration pipeline `tools/` and the narration QA file are left out). Nothing in
 for the commit.
 
 ```bash
-npm run import-simulation -- automotive --repo https://github.com/BKimble1/automotive-simulation --ref <commit> --branch claude/automotive-one
+npm run import-simulation -- automotive --repo https://github.com/BKimble1/automotive-simulation --ref <commit> --branch claude/automotive-v2
 npm run build && npm run e2e && npm run e2e:automotive
 ```
 
@@ -265,11 +265,17 @@ npm run build && npm run e2e && npm run e2e:automotive
 works, and it reads `VITE_FABONE_HOME` for its "Back to FAB / ONE" link. It registers no
 service worker and keeps no browser storage; everything it loads is under `/automotive/`,
 including the film's bundled narration (`/automotive/narration/<version>/`, revalidated hourly
-like the rocket's). Checked by the build and by `e2e/automotive.spec.ts`.
+like the rocket's) and, from V2, the module worker that computes lab charts and long seeks
+(`/automotive/assets/simWorker-<hash>.js`). Checked by the build and by
+`e2e/automotive.spec.ts`, which also runs a lab at the route and checks that its worker loaded
+from there and did the work, and starts the car on the driving workbench.
 
-**Its own tests** run at the route with `npm run e2e:automotive` (its Playwright suite: deep
-links and Back, search, the film, labs, a diagnosis, camera continuity, context loss, reduced
-motion and layout, on desktop, laptop, tablet and phone sizes).
+**Its own tests** run at the route with `npm run e2e:automotive` (its Playwright suite on
+desktop, laptop, tablet and phone sizes: deep links and Back, search, the film, labs, a
+diagnosis, camera continuity, context loss, reduced motion and layout; and from V2 rendered
+intermediate frames, true pause, run isolation, rapid camera reversals, the driving workbench by
+keys and touch, every diagnosis case, six layouts, a ten-minute endurance run and real-time
+playback).
 
 **Its preview** is recorded from the built site on its frame-stepped clock
 (`?virt=1&capture=1&quality=high`), from [`site/media/automotive/preview.json`](site/media/automotive/preview.json),
@@ -283,8 +289,8 @@ The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONO
 
    ```bash
    npm run build
-   npm run package -- --name FAB_ONE_Automotive_Netlify    # release/FAB_ONE_Automotive_Netlify.zip
-   npm run verify-package -- release/FAB_ONE_Automotive_Netlify.zip
+   npm run package -- --name FAB_ONE_Four_Simulations_Automotive_V2_Netlify    # release/FAB_ONE_Four_Simulations_Automotive_V2_Netlify.zip
+   npm run verify-package -- release/FAB_ONE_Four_Simulations_Automotive_V2_Netlify.zip
    ```
 
    (`npm run package` alone makes `release/fab-one-site.zip`.) The check unzips the package

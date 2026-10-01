@@ -8,6 +8,7 @@
  * (+x, az π/2); the left side is az π, the rear −π/2. el is the elevation (rad).
  */
 import { Vector3 } from 'three';
+import { SHAFT_KEY } from '../sim/geartrain';
 import type { Shot } from '../scene/camera/director';
 import { CRANK_Y, DECK_Y, FLEX_X, XC } from '../scene/car/engineGeo';
 import { DIFF_C, TRANS } from '../scene/car/drivetrainGeo';
@@ -34,6 +35,8 @@ const V = (x: number, y: number, z: number) => new Vector3(x, y, z);
 export const PANELS_ALL = ['shell', 'hood', 'bumperFront', 'fenderL', 'fenderR', 'doorFL', 'doorFR', 'doorRL', 'doorRR', 'trunk', 'bumperRear'];
 export const PANELS_FRONT = ['hood', 'bumperFront', 'fenderL', 'fenderR'];
 export const PANELS_LEFT = ['doorFL', 'doorRL', 'fenderL'];
+/** The door trims (each rides on its door). */
+const DOOR_TRIMS = ['door-trim-FL', 'door-trim-FR', 'door-trim-RL', 'door-trim-RR'];
 
 /** Body channels: ghost these panels by `amount`. */
 export function bodyGhost(panels: string[], amount = 1): Record<string, number> {
@@ -68,7 +71,7 @@ export const VIEWS: Record<string, View> = {
   // ─────────── the vehicle ───────────
   hero: {
     id: 'hero',
-    shot: { id: 'hero', target: V(0.05, 0.62, 0), az: 2.32, el: 0.13, dist: 9.2, fov: 26, ox: -0.12, drift: 0.018, sway: 0.02, subject: { w: 5.2, h: 1.7 }, orbit: { az: null, el: [0.03, 0.7], dist: [0.7, 1.4] } },
+    shot: { id: 'hero', target: V(0.05, 0.6, 0), az: 2.32, el: 0.12, dist: 8.4, fov: 26, drift: 0.012, sway: 0.015, subject: { w: 4.8, h: 1.45 }, orbit: { az: null, el: [0.03, 0.7], dist: [0.7, 1.4] } },
     channels: {},
   },
   overview: {
@@ -114,7 +117,7 @@ export const VIEWS: Record<string, View> = {
   'sys-driveline': {
     id: 'sys-driveline',
     shot: { id: 'sys-driveline', target: V(-0.2, 0.36, 0), az: 2.6, el: 0.36, dist: 6.0, fov: 30, ox: 0.1, subject: { w: 4.4, h: 1.0 }, orbit: { az: null, el: [0.05, 1.2], dist: [0.6, 1.5] } },
-    channels: { ...all(0.9), ...ghostParts(['cabin', 'safety', 'hvac'], 0.85), ...hideAll(['door-trims']), dim: 0.65, 'hl:transmission': 0.55, 'hl:driveline': 0.55, 'flow:torque': 1 },
+    channels: { ...all(0.9), ...ghostParts(['cabin', 'safety', 'hvac'], 0.85), ...hideAll(DOOR_TRIMS), dim: 0.65, 'hl:transmission': 0.55, 'hl:driveline': 0.55, 'flow:torque': 1 },
     focus: ['transmission', 'driveline', 'engine', 'wheels'],
     free: true,
     requires: ['car'],
@@ -172,7 +175,9 @@ export const VIEWS: Record<string, View> = {
   'start-button': {
     id: 'start-button',
     shot: { id: 'start-button', target: V(0.54, 0.865, -0.6), az: 3.85, el: 0.3, dist: 0.72, fov: 30, ox: 0.02, subject: { w: 0.3, h: 0.2 }, orbit: false },
-    channels: { ...bodyGhost(['doorFL', 'doorRL', 'shell'], 0.88), ...hideAll(['door-trims', 'seat-driver', 'head-restraints', 'seat-belt-driver', 'airbag-modules']), studio: 0.6, dim: 0.5, 'hl:start-button': 0.9, ...labels('start-button') },
+    // the driver's door opens and the camera looks in past the seat (a ghosted door's glass
+    // would lay its reflections over the whole dashboard)
+    channels: { 'open:doorFL': 1, ...bodyGhost(['doorRL'], 0.9), ...hideAll(['seat-driver', 'head-restraints', 'seat-belt-driver']), studio: 0.6, dim: 0.5, 'hl:start-button': 0.9, ...labels('start-button') },
     focus: ['cabin', 'controls', 'steering', 'control'],
     requires: ['car'],
   },
@@ -208,7 +213,7 @@ export const VIEWS: Record<string, View> = {
   'torque-path': {
     id: 'torque-path',
     shot: { id: 'torque-path', target: V(-0.1, 0.38, 0), az: 2.75, el: 0.3, dist: 6.0, fov: 30, ox: 0.08, subject: { w: 4.6, h: 1.0 }, orbit: { az: [-0.6, 0.6], el: [0.05, 0.9], dist: [0.7, 1.3] } },
-    channels: { ...all(0.92), ...ghostParts(['transmission-case', 'diff-housing', 'diff-cover'], 0.7), ...ghostParts(ENGINE_CASINGS, 0.4), ...ghostParts(['cabin', 'safety', 'hvac'], 0.9), ...hideAll(['door-trims']), studio: 0.5, dim: 0.65, 'flow:torque': 1, 'hl:transmission': 0.35, 'hl:driveline': 0.35 },
+    channels: { ...all(0.92), ...ghostParts(['transmission-case', 'diff-housing', 'diff-cover'], 0.7), ...ghostParts(ENGINE_CASINGS, 0.4), ...ghostParts(['cabin', 'safety', 'hvac'], 0.9), ...hideAll(DOOR_TRIMS), studio: 0.5, dim: 0.65, 'flow:torque': 1, 'hl:transmission': 0.35, 'hl:driveline': 0.35 },
     focus: ['engine', 'transmission', 'driveline', 'wheels'],
     requires: ['car'],
   },
@@ -259,11 +264,19 @@ export const VIEWS: Record<string, View> = {
   },
   'gear-elements': {
     id: 'gear-elements',
-    shot: { id: 'gear-elements', target: V(0.79, TRANS.axisY + 0.01, 0.0), az: 3.22, el: 0.28, dist: 1.25, fov: 30, ox: 0.04, subject: { w: 0.62, h: 0.36 }, orbit: { az: [-0.5, 0.5], el: [0.0, 0.7], dist: [0.8, 1.4] } },
-    channels: { ...all(1), 'cut:transmission': 1, ...isolate(['transmission', 'engine', 'driveline'], ['wheels']), ...ghostParts(['engine'], 0.85), ...hideAll(['converter-impeller', 'converter-turbine', 'converter-stator', 'lockup-clutch']), studio: 0.75, dim: 0.75, 'flow:elements': 1, ...labels('el-A', 'el-B', 'el-C', 'el-D', 'el-E') },
-    tint: { 'shift-element-A': '#f0a23c', 'shift-element-B': '#f0a23c', 'shift-element-C': '#f0a23c', 'shift-element-D': '#f0a23c', 'shift-element-E': '#f0a23c' },
+    shot: { id: 'gear-elements', target: V(0.775, TRANS.axisY + 0.01, 0.0), az: 3.3, el: 0.42, dist: 1.0, fov: 30, ox: 0.04, subject: { w: 0.44, h: 0.3 }, orbit: { az: [-0.5, 0.5], el: [0.0, 0.7], dist: [0.8, 1.4] } },
+    channels: { ...all(1), 'cut:transmission': 1, ...isolate(['transmission', 'engine', 'driveline'], ['wheels']), ...ghostParts(['engine'], 0.85), ...hideAll(['converter-impeller', 'converter-turbine', 'converter-stator', 'lockup-clutch']), studio: 0.75, dim: 0.75, 'flow:elements': 1, ...Object.fromEntries(SHAFT_KEY.flatMap((k) => k.parts.map((p) => [`hl:${p}`, 0.75]))), ...labels('el-A', 'el-B', 'el-C', 'el-D', 'el-E') },
+    // the eight shafts by colour (members joined in the gearbox share one), the elements bright
+    tint: { ...Object.fromEntries(SHAFT_KEY.flatMap((k) => k.parts.map((p) => [p, k.color]))), 'shift-element-A': '#f2f2f2', 'shift-element-B': '#f2f2f2', 'shift-element-C': '#f2f2f2', 'shift-element-D': '#f2f2f2', 'shift-element-E': '#f2f2f2' },
     focus: ['transmission'],
     requires: ['car'],
+  },
+  'drive-chase': {
+    id: 'drive-chase',
+    shot: { id: 'drive-chase', target: V(0.4, 0.62, 0), az: -2.32, el: 0.2, dist: 7.6, fov: 30, subject: { w: 5.2, h: 2.0 }, orbit: { az: [-1.2, 1.2], el: [0.04, 0.9], dist: [0.6, 1.5] } },
+    channels: { 'show:road': 1, studio: 0.55 },
+    requires: ['car'],
+    free: true,
   },
   'corner-top': {
     id: 'corner-top',
@@ -335,7 +348,7 @@ export const VIEWS: Record<string, View> = {
   },
   exploded: {
     id: 'exploded',
-    shot: { id: 'exploded', target: V(0.0, 0.75, 0), az: 2.4, el: 0.34, dist: 11.5, fov: 30, ox: 0.04, drift: 0.035, subject: { w: 7.4, h: 2.6 }, orbit: { az: null, el: [0.05, 1.1], dist: [0.7, 1.4] } },
+    shot: { id: 'exploded', target: V(0.0, 0.75, 0), az: 2.4, el: 0.34, dist: 11.5, fov: 30, ox: 0.04, drift: 0.035, subject: { w: 7.4, h: 2.9 }, orbit: { az: null, el: [0.05, 1.1], dist: [0.7, 1.4] } },
     channels: { 'explode:explode': 1, studio: 0.5 },
     free: true,
     requires: ['car'],
@@ -364,3 +377,37 @@ export const KEEP_OUT: { a: Vector3; b: Vector3; r: number }[] = [
   { a: V(-1.2, 1.0, 0.32), b: V(0.35, 1.0, 0.32), r: 0.42 },
   ...[BODY.xFront, BODY.xRear].flatMap((x) => [-1, 1].map((s) => ({ a: V(x, WHEEL_Y, s * 0.66), b: V(x, WHEEL_Y, s * 0.96), r: 0.36 }))),
 ];
+
+/**
+ * The visitor's view choices in Explore: the same subject, from the same shot, drawn another
+ * way. Only choices with a meaningful picture are offered (a cutaway where there is a section,
+ * the open car where panels open, the exploded car at the car's and the body's level).
+ */
+export type ViewMode = 'explained' | 'exterior' | 'opened' | 'cutaway' | 'exploded';
+
+/** The section planes that cut each system's housings. */
+const SYSTEM_CUTS: Record<string, string[]> = {
+  power: ['engine'],
+  air: ['engine'],
+  driveline: ['transmission', 'diff'],
+};
+
+export function viewModes(system: string | null, kind: 'car' | 'system' | 'assembly' | 'part'): ViewMode[] {
+  const out: ViewMode[] = ['explained', 'exterior'];
+  if (kind === 'car' || system === 'body' || system === 'cabin' || system === 'power') out.push('opened');
+  if (system && SYSTEM_CUTS[system]) out.push('cutaway');
+  if (kind === 'car' || (system === 'body' && kind === 'system')) out.push('exploded');
+  return out;
+}
+
+export function viewVariant(base: View, mode: ViewMode, system: string | null): View {
+  if (mode === 'explained') return base;
+  if (mode === 'exploded') return { ...VIEWS.exploded, id: `${base.id}~exploded`, shot: VIEWS.exploded.shot };
+  const channels: Record<string, number> =
+    mode === 'exterior'
+      ? { studio: base.channels.studio ?? 1 }
+      : mode === 'opened'
+        ? { studio: base.channels.studio ?? 1, open: 1 }
+        : { ...base.channels, ...Object.fromEntries((SYSTEM_CUTS[system ?? ''] ?? []).map((c) => [`cut:${c}`, 1])) };
+  return { ...base, id: `${base.id}~${mode}`, channels, tint: mode === 'cutaway' ? base.tint : {}, focus: mode === 'cutaway' ? base.focus : [] };
+}

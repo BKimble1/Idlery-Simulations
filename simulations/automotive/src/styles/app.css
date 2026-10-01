@@ -89,6 +89,15 @@ html.virt *::after {
   transition: none !important;
   animation: none !important;
 }
+/* reduced motion: panels and controls change at once (fades stay short); nothing slides */
+html.reduced *,
+html.reduced *::before,
+html.reduced *::after {
+  transition-duration: 0.01ms !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
 
 /* ───────────────────────── stage ───────────────────────── */
 .app {
@@ -256,10 +265,13 @@ html.virt *::after {
 /* ───────────────────────── intro ───────────────────────── */
 .intro {
   position: absolute;
-  left: calc(64px + var(--safe-l));
-  top: 50%;
-  transform: translateY(-46%);
-  max-width: 560px;
+  left: calc(48px + var(--safe-l));
+  right: calc(48px + var(--safe-r));
+  bottom: calc(32px + var(--safe-b));
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.75fr);
+  align-items: end;
+  gap: 36px;
   z-index: 5;
 }
 .intro__eyebrow {
@@ -287,24 +299,27 @@ html.virt *::after {
   font-family: var(--font-wide);
   font-stretch: 125%;
   font-weight: 700;
-  font-size: clamp(38px, 5.6vw, 76px);
-  line-height: 0.98;
+  font-size: clamp(30px, 3.3vw, 46px);
+  line-height: 1;
   letter-spacing: 0.02em;
-  margin: 16px 0 12px;
+  margin: 12px 0 8px;
 }
 .intro__title .slash {
   color: var(--accent);
   font-weight: 500;
 }
 .intro__tag {
-  font-size: 19px;
+  font-size: 16px;
   color: var(--ink-2);
-  margin: 0 0 28px;
+  margin: 0;
 }
 .intro__cards {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
+}
+.intro__cards .card {
+  min-height: 84px;
 }
 .card {
   text-align: left;
@@ -643,20 +658,33 @@ html.virt *::after {
     font-size: 11px;
   }
   .intro {
-    left: calc(18px + var(--safe-l));
-    right: calc(18px + var(--safe-r));
-    top: auto;
-    bottom: calc(18px + var(--safe-b));
-    transform: none;
-    max-width: none;
+    left: calc(16px + var(--safe-l));
+    right: calc(16px + var(--safe-r));
+    bottom: calc(16px + var(--safe-b));
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
   }
   .intro__title {
-    font-size: 38px;
-    margin: 10px 0 6px;
+    font-size: 30px;
+    margin: 8px 0 4px;
   }
   .intro__tag {
-    font-size: 16px;
-    margin-bottom: 16px;
+    font-size: 14.5px;
+  }
+  .intro__cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .intro__cards .card {
+    min-height: 48px;
+    padding: 10px 12px;
+  }
+  /* on a phone the car keeps the room: the entries are named, their lines are for desktops */
+  .intro__cards .card span {
+    display: none;
+  }
+  .intro__cards .card b {
+    margin: 0;
   }
   .intro__meta {
     display: none;
@@ -793,8 +821,52 @@ html.virt *::after {
 .readouts {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 6px;
   margin: 2px 0 10px;
+}
+/* the gearbox's eight shafts: colour ring, name, speed (two columns, compact) */
+.gearkey {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 14px;
+  margin: 0 0 2px;
+  padding: 0;
+  list-style: none;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+.gearkey li {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.gearkey i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 3px solid;
+  box-sizing: border-box;
+}
+.gearkey__name {
+  color: var(--ink-2, #aeb4c0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gearkey__v {
+  color: var(--ink, #eef1f6);
+  text-align: right;
+  white-space: nowrap;
+}
+@media (max-width: 760px) {
+  .gearkey {
+    font-size: 11px;
+    gap: 1px 10px;
+  }
 }
 .chip {
   display: inline-flex;
@@ -1614,3 +1686,428 @@ html.virt *::after {
     padding: 2px 6px;
   }
 }
+
+/* ───────────────────────── the driving workbench ───────────────────────── */
+.run-state {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+.run-state--live {
+  color: #0b0c0e;
+  background: var(--ok);
+  border-color: transparent;
+}
+.ex-row--feature {
+  width: 100%;
+  margin: 4px 0 10px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
+}
+.wb-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  margin: 6px 0 4px;
+}
+.wb-start {
+  flex: 0 0 auto;
+  min-width: 84px;
+  min-height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink);
+  font: 650 14px/1 var(--font);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+}
+.wb-start small {
+  font-size: 10px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.wb-start--on {
+  border-color: var(--accent-line);
+  box-shadow: inset 0 0 0 1px var(--accent-line);
+}
+.wb-start:focus-visible,
+.wb-selector button:focus-visible,
+.pad:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.wb-selector {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+.wb-selector button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-3);
+  font: 700 15px/1 var(--font-wide);
+  cursor: pointer;
+}
+.wb-selector button[aria-pressed='true'] {
+  background: var(--accent-strong);
+  color: #fff;
+}
+.wb-selector button.wb-sel--wanted {
+  box-shadow: inset 0 0 0 1px var(--warn);
+  color: var(--warn);
+}
+.wb-msg {
+  min-height: 1.4em;
+  margin: 2px 0 6px !important;
+  font-size: 12.5px;
+  color: var(--warn) !important;
+}
+.wb-gauges {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.7fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.wb-gauge {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+}
+.wb-gauge span {
+  font: 600 20px/1.05 var(--font);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.wb-gauge--big span {
+  font-size: 30px;
+}
+.wb-gauge small {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.wb-warn {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wb-warn li {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  text-transform: capitalize;
+  color: #1b1200;
+  background: var(--warn);
+}
+.wb-more dd {
+  font-variant-numeric: tabular-nums;
+}
+kbd {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 0 4px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+  font: 600 10.5px/1.5 var(--font);
+  text-align: center;
+  color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+.wb-keys {
+  font-size: 11.5px;
+  line-height: 1.8;
+}
+/* the pads: steering on the left, brake and accelerator on the right, at the foot of the view */
+.pads {
+  position: absolute;
+  left: calc(16px + var(--safe-l));
+  right: calc(var(--panel-w) + 40px + var(--safe-r));
+  bottom: calc(16px + var(--safe-b));
+  height: 104px;
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  z-index: 11;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pad {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid var(--line-2);
+  background: rgba(16, 17, 20, 0.72);
+  cursor: grab;
+  touch-action: none;
+}
+.pad--on {
+  border-color: var(--accent-line);
+}
+.pad__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  background: linear-gradient(to top, rgba(139, 125, 255, 0.42), rgba(139, 125, 255, 0.12));
+  pointer-events: none;
+}
+.pad--brake .pad__fill {
+  background: linear-gradient(to top, rgba(204, 121, 167, 0.5), rgba(204, 121, 167, 0.12));
+}
+.pad--steer .pad__fill {
+  left: 50%;
+  width: 3px;
+  margin-left: -1.5px;
+  transform-origin: 50% 50%;
+  background: var(--accent);
+  border-radius: 2px;
+  inset: 12px auto 12px 50%;
+}
+.pad__label {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font: 650 12px/1 var(--font);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  pointer-events: none;
+}
+.pad--steer .pad__label {
+  left: 50%;
+  transform: translateX(-50%);
+}
+.pad__key {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .pad__key,
+  .wb-keys,
+  .wb-start small {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  /* narrow phones: the pedal names fit their pads (the accelerator's is the longest) */
+  .pads.pads {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  }
+  .pad__label {
+    left: 8px;
+    font-size: 11px;
+    letter-spacing: 0.01em;
+  }
+}
+@media (max-width: 760px) {
+  .pads {
+    left: calc(8px + var(--safe-l));
+    right: calc(8px + var(--safe-r));
+    bottom: calc(8px + var(--safe-b));
+    height: 92px;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+  }
+  .panel.wb {
+    bottom: calc(110px + var(--safe-b)) !important;
+    max-height: 36vh !important;
+  }
+  .wb-gauge--big span {
+    font-size: 24px;
+  }
+}
+
+/* touch targets: small visual controls get a usable area of at least 44 CSS px */
+.ibtn,
+.tab,
+.ex-back,
+.pbtn,
+.wordmark,
+.top__sim,
+.chart__run {
+  position: relative;
+}
+/* (measured from inside the 1 px border: a 32 px button reaches 46 px) */
+.ibtn::after,
+.ex-back::after,
+.pbtn:not(.pbtn--wide)::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+.tab::after {
+  content: '';
+  position: absolute;
+  inset: -8px -1px;
+}
+.wordmark::after {
+  content: '';
+  position: absolute;
+  inset: -12px -8px;
+}
+/* the simulation's name (back to its start): a full-height target, not just its line of text */
+.top__sim::after {
+  content: '';
+  position: absolute;
+  inset: -16px -4px -16px 0;
+}
+.chart__run::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+.ibtn--alert::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+:where(button, a, [role='button'], [role='slider']):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Explore: details opened on request */
+.ex-where {
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.ex-where b {
+  margin-right: 6px;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ex-more {
+  border-top: 1px solid var(--line);
+  padding: 2px 0;
+}
+.ex-more > summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 11px 2px;
+  min-height: 44px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.ex-more > summary::-webkit-details-marker {
+  display: none;
+}
+.ex-more > summary::after {
+  content: '+';
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.ex-more[open] > summary::after {
+  content: '–';
+}
+.ex-more > :not(summary) {
+  margin-bottom: 10px;
+}
+.ex-fail ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.ex-views {
+  margin: 4px 0 12px;
+}
+
+/* the phone's information sheet: a handle to collapse, expand or drag it */
+.sheet-handle {
+  display: none;
+}
+@media (max-width: 760px) {
+  .sheet-handle {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: sticky;
+    top: -14px;
+    margin: -14px -10px 6px;
+    height: 30px;
+    z-index: 2;
+    cursor: grab;
+    touch-action: none;
+    background: linear-gradient(var(--panel-solid) 60%, transparent);
+  }
+  .sheet-handle span {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-2);
+  }
+  .panel--sheet {
+    transition: height 0.24s var(--ease);
+  }
+  .panel--sheet.panel--dragging {
+    transition: none;
+  }
+}
+
+/* a live run's time scale, under its title */
+.run-pace {
+  margin: -2px 0 8px;
+}
+
+/* Recentre: over the scene, at the top right of the part the interface leaves free */
+.recentre {
+  position: fixed;
+  top: calc(var(--free-t, 64px) + 8px);
+  right: calc(var(--free-r, 0px) + 12px);
+  z-index: 5;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 18px;
+  border: 1px solid var(--line-2);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.recentre::after {
+  content: '';
+  position: absolute;
+  inset: -5px -2px;
+}
+

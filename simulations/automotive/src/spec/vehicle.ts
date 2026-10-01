@@ -15,6 +15,8 @@
  * on the centreline, halfway between the axles. The driver sits on the left (−z).
  */
 
+import { DERIVED_RATIOS } from '../sim/geartrain';
+
 export const NAME = 'S-1';
 
 /** Body and package (design: a mid-size four-door sport sedan). */
@@ -74,8 +76,10 @@ export const TIRE = {
   rollingResistance: 0.011,
   /** Peak friction coefficient on dry asphalt (typical summer tyre). */
   muDry: 1.05,
-  muWet: 0.7,
-  muSnow: 0.3,
+  /** Wet asphalt with standing water films and packed snow (typical; used by every lab, lesson,
+   * scenario and the workbench, so the same road means the same grip everywhere). */
+  muWet: 0.55,
+  muSnow: 0.25,
   muIce: 0.1,
   /** Longitudinal slip at peak friction (typical). */
   peakSlip: 0.12,
@@ -104,8 +108,9 @@ export const ENGINE = {
   firingOrder: [1, 3, 4, 2] as const,
   idleRpm: 750,
   redlineRpm: 6800,
-  /** Fuel cut-off (rev limiter). */
+  /** Fuel cut-off (rev limiter), and the lower one with no gear engaged (P or N) (typical). */
   limiterRpm: 7000,
+  limiterNeutralRpm: 4500,
   /** Peak torque and power (design). */
   peakTorque: 255,
   peakTorqueRpm: 4400,
@@ -156,8 +161,9 @@ export const VALVES = {
  * the kind modern eight-speeds use).
  */
 export const GEARBOX = {
-  ratios: [4.71, 3.14, 2.11, 1.67, 1.29, 1.0, 0.84, 0.67] as const,
-  reverse: -3.3,
+  /** Ratios of 1st … 8th and reverse, derived from the gearsets' tooth counts (sim/geartrain.ts). */
+  ratios: DERIVED_RATIOS.forward as readonly number[],
+  reverse: DERIVED_RATIOS.reverse,
   /** Final drive (ring and pinion). */
   finalDrive: 3.15,
   /** Efficiency of the gearbox and final drive together (typical). */

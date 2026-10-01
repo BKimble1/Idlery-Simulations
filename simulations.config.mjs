@@ -113,14 +113,14 @@ export default [
     tagline: 'How a car becomes motion.',
     field: 'Automotive engineering',
     summary:
-      'Open up S-1, an original modern sedan, from the start button to the tyres on the road: watch it start and fire in cutaway, follow the torque through the gearbox and differential, and see every system at work. Then change its gearing, springs and brakes in eight labs, and diagnose six real faults.',
-    facts: ['Narrated film', '10 hero lessons', '6 faults to diagnose'],
+      'Open up S-1, an original modern sedan, from the start button to the tyres on the road. Start it and drive it yourself, watch each cylinder fire in cutaway, and follow the torque through an eight-speed gearbox and the differential. Then change its gearing, springs and brakes in eight labs, and diagnose six faults.',
+    facts: ['Narrated film', 'Drive it yourself', '8 labs · 6 faults'],
     launch: 'Launch simulation',
     preview: {
       mp4: 'media/automotive/preview.mp4',
       webm: 'media/automotive/preview.webm',
       poster: 'media/automotive/poster.webp',
-      alt: 'Recorded in the simulation: the S-1 sedan in its studio; the engine in cutaway as a cylinder fires; torque flowing from the crankshaft through the gearbox and driveshaft to the rear wheels; and the car taken apart into its systems.',
+      alt: 'Recorded in the simulation: the S-1 sedan in its studio; the car started and driven away on the workbench road; the engine in cutaway as a cylinder fires; torque flowing from the crankshaft through the gearbox and driveshaft to the rear wheels; and the car taken apart into its systems.',
     },
     // the bundled narration keeps its file names from build to build
     headers: { 'narration/*': REVALIDATED },

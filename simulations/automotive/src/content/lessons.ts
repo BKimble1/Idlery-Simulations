@@ -7,9 +7,10 @@
  * Time: each beat runs mechanical time at its time scale (slow motion for the engine, real time
  * for driving, fast-forward for warming up), integrated exactly, so seeking is deterministic.
  */
-import { NO_FAULTS, presetCold, presetCruise, presetIdle, type CarState, type Inputs } from '../sim/car';
+import { NO_FAULTS, presetCold, presetCruise, presetIdle, type CarState, type Inputs, type RoadSpec } from '../sim/car';
+import { TIRE } from '../spec/vehicle';
 import type { Beat, Sequence } from '../world/sequence';
-import { brakeAt, bump, cruise, pullAway } from './drivers';
+import { brakeAt, cruise, pullAway } from './drivers';
 
 /** Hold the start button from `press` until the engine runs (the car's start-stop logic). */
 function startScript(press: number) {
@@ -53,7 +54,7 @@ const startBeats: Beat[] = [
   {
     id: 'battery',
     title: 'The battery feeds the starter',
-    text: 'The 12-volt battery sends about 200 amps to the starter motor. Its voltage dips while the starter works.',
+    text: 'The 12-volt battery sends about 170 amps to the starter motor. Its voltage dips while the starter works.',
     duration: 5,
     view: 'battery-starter',
     timeScale: 0.05,
@@ -203,7 +204,7 @@ const torqueBeats: Beat[] = [
     duration: 5,
     view: 'gear-elements',
     timeScale: 0.1,
-    readouts: ['gear', 'rpm', 'elements'],
+    readouts: ['gearKey', 'gear', 'ratio', 'elements'],
   },
   {
     id: 'upshift',
@@ -212,7 +213,7 @@ const torqueBeats: Beat[] = [
     duration: 7,
     view: 'gear-elements',
     timeScale: 0.1,
-    readouts: ['gear', 'rpm', 'elements'],
+    readouts: ['gearKey', 'gear', 'slip', 'elements'],
   },
   {
     id: 'differential',
@@ -235,7 +236,7 @@ const torqueBeats: Beat[] = [
   {
     id: 'away',
     title: 'Motion',
-    text: 'The fuel’s chemical energy has become forward motion: 1,560 kilograms gaining about 12 km/h every second.',
+    text: 'The fuel’s chemical energy has become forward motion: 1,560 kilograms, already past 60 km/h and still gaining speed.',
     duration: 5,
     view: 'drive-away',
     timeScale: 1,
@@ -249,7 +250,7 @@ const CORNER = { R: 12, curveX: 19 };
 const cornerProgram = {
   start: () => presetCruise(25),
   drive: cruise(25, CORNER, 0.14),
-  road: { mu: 1, curve: 1 / CORNER.R, curveX: CORNER.curveX } as never,
+  road: { mu: TIRE.muDry, curve: 1 / CORNER.R, curveX: CORNER.curveX },
 };
 const diffBeats: Beat[] = [
   {
@@ -285,10 +286,7 @@ const diffBeats: Beat[] = [
 
 // ───────────────────────────── 6. suspension over a bump ─────────────────────────────
 const BUMP_AT = 18;
-const bumpRoad = (at: number) => {
-  const b = bump(at);
-  return { mu: 1, height: (s: number) => b(s), bumpAt: at } as never;
-};
+const bumpRoad = (at: number): RoadSpec => ({ mu: TIRE.muDry, bumpAt: at });
 const suspensionBeats: Beat[] = [
   {
     id: 'susp-parts',
@@ -331,7 +329,7 @@ const suspensionBeats: Beat[] = [
 ];
 
 // ───────────────────────────── 7. braking: without and with ABS ─────────────────────────────
-const WET = { mu: 0.55 };
+const WET = { mu: TIRE.muWet };
 const brakeBeats: Beat[] = [
   {
     id: 'brake-system',
@@ -414,7 +412,7 @@ const coolingBeats: Beat[] = [
     text: 'Stopped in hot traffic, little air passes through the radiator. When the coolant passes 102 degrees, the electric fans switch on and pull air through it.',
     duration: 6,
     view: 'cooling-circuit',
-    program: { start: warmAt(102.2), drive: idleInPark, road: { mu: 1, ambientC: 38 } },
+    program: { start: warmAt(102.2), drive: idleInPark, road: { mu: TIRE.muDry, ambientC: 38 } },
     timeScale: 1,
     readouts: ['coolantC', 'fan'],
   },
@@ -444,7 +442,9 @@ const electricalBeats: Beat[] = [
     text: 'Once the engine runs, the belt-driven alternator powers the car and recharges the battery, holding the system at about 14 volts.',
     duration: 7,
     view: 'charging',
-    program: { start: presetIdle, drive: lightsOn(5, 70) },
+    // the headlights and blower (20 A) come on just after the next step starts; at idle the
+    // alternator can carry that and still charge the battery, so the voltage holds (tested)
+    program: { start: presetIdle, drive: lightsOn(7.3, 20) },
     timeScale: 1,
     chapter: 'Electrical and control',
     readouts: ['volts', 'alternatorAmps', 'batteryAmps'],
@@ -452,7 +452,7 @@ const electricalBeats: Beat[] = [
   {
     id: 'load',
     title: 'More load',
-    text: 'Switch on the lights, the blower and the heated rear window, and the alternator’s regulator raises its field to supply the extra current while the voltage holds.',
+    text: 'Switch on the headlights and the blower, and the alternator’s regulator raises its field to supply the extra current while the voltage holds.',
     duration: 6,
     view: 'charging',
     timeScale: 1,

@@ -1,16 +1,20 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
 import simulations from '../simulations.config.mjs';
 import { fresh, overflow, watchErrors } from './helpers';
 
 /**
  * AUTOMOTIVE / ONE at its route, /automotive, as visitors reach it: a direct visit and a
  * refresh, links into each mode (a part, a lesson, the film at a moment, a lab, a fault), the
- * address following the visitor, and the way back to FAB / ONE. The simulation's own suite (44
- * browser tests on four screen sizes) runs in its repository.
+ * address following the visitor, the way back to FAB / ONE, a lab computed by its worker loaded
+ * from the route, and the driving workbench. The simulation's own suite (e2e/app.spec.ts on four
+ * screen sizes and e2e/v2.spec.ts) runs at the route with npm run e2e:automotive.
  */
 
 const ORIGIN = 'http://127.0.0.1:8888';
 const automotive = simulations.find((s) => s.slug === 'automotive')!;
+/** The bundled narration's version (its folder), from the imported simulation. */
+const NARRATION = (JSON.parse(readFileSync(new URL('../simulations/automotive/src/content/narration-manifest.json', import.meta.url), 'utf8')) as { version: string }).version;
 
 /** Requests the page makes to this site outside /automotive (there should be none). */
 function outside(page: Page): string[] {
@@ -116,6 +120,36 @@ test('/automotive answers with its page at every address, without redirecting', 
   }
   expect((await request.get('/automotive/assets/missing.js')).status()).toBe(404);
   // the narration is served with its own type
-  const m = await request.get('/automotive/narration/film-2/manifest.json');
+  const m = await request.get(`/automotive/narration/${NARRATION}/manifest.json`);
   expect(m.status()).toBe(200);
+  expect(m.headers()['content-type']).toMatch(/^application\/json\b/);
+});
+
+test('a lab computes off the page: its worker loads from the route and its result arrives', async ({ page }) => {
+  const errors = watchErrors(page);
+  const workers: string[] = [];
+  page.on('worker', (w) => workers.push(new URL(w.url()).pathname));
+  const out = outside(page);
+  await fresh(page, '/automotive?mode=engineer&lab=braking&hooks=1');
+  await ready(page);
+  await expect(page.locator('.eng-results__title')).toContainText('Baseline', { timeout: 120_000 });
+  expect(workers.length).toBeGreaterThan(0);
+  for (const w of workers) expect(w).toMatch(/^\/automotive\/assets\/[\w-]+\.js$/);
+  const used = await page.evaluate(() => (window as unknown as { __fab: { jobs: { usingWorker: boolean } } }).__fab.jobs.usingWorker);
+  expect(used, 'the lab ran in the worker, not on the page').toBe(true);
+  await expect(page.locator('.eng-results')).not.toContainText('NaN');
+  expect(out).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('the driving workbench starts the car at /automotive', async ({ page }) => {
+  const errors = watchErrors(page);
+  await fresh(page, '/automotive?mode=simulate&scenario=drive&hooks=1');
+  await ready(page);
+  await page.waitForFunction(() => (window as unknown as Win).__fabStores?.useApp.getState().carReady === true, undefined, { timeout: 180_000 });
+  await page.locator('.wb-start').click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __fab: { model: { s: { engine: string } } } }).__fab.model.s.engine), { timeout: 60_000 })
+    .toBe('running');
+  expect(errors).toEqual([]);
 });

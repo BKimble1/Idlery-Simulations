@@ -11,7 +11,7 @@
  * stays where the road is. Links (arms, tie rods, dampers, springs, half shafts) are posed every
  * frame between their body-side and wheel-side points.
  */
-import { BufferGeometry, Group, Mesh, MeshPhysicalMaterial, Object3D, Quaternion, Vector3 } from 'three';
+import { BufferGeometry, CircleGeometry, DataTexture, Group, LinearFilter, Mesh, MeshPhysicalMaterial, MeshStandardMaterial, Object3D, Quaternion, RGBAFormat, SRGBColorSpace, Vector3, type Texture } from 'three';
 import { BODY, BRAKES, TIRE, WHEEL_Y } from '../../spec/vehicle';
 import { alongAxis, at, extrude, lathe, merge, rbox, rod, spring, tube } from '../geo/shapes';
 import { DIFF_C } from './drivetrainGeo';
@@ -24,6 +24,14 @@ export const CORNERS = [
   { id: 'RL', x: BODY.xRear, z: -BODY.trackRear / 2, front: false, side: -1 },
   { id: 'RR', x: BODY.xRear, z: BODY.trackRear / 2, front: false, side: 1 },
 ] as const;
+
+/**
+ * The steering linkage's hard points (m): the steering arm's ball joint ahead of the axle
+ * (`tieX`) and inboard of the wheel's centre plane (`tieZ`), and the rack's ends from the car's
+ * centre line (`rackZ`). Chosen so that, turning about the ball-joint axis, the linkage gives the
+ * model's Ackermann angles with the tie rods at constant length (tested).
+ */
+export const STEER_GEO = { tieX: 0.17, tieZ: 0.07, rackZ: 0.33 };
 
 const RIM_R = (18 * 0.0254) / 2;
 const RIM_W = 8.5 * 0.0254;
@@ -55,6 +63,8 @@ export interface CornerParts {
   pads: PartNode[];
   /** Wheel-side link points in the corner's frame (origin at the wheel centre). */
   local: Record<string, Vector3>;
+  /** The spin blur over the spokes (opacity from how far the wheel turns per drawn frame). */
+  blur: Mesh<CircleGeometry, MeshStandardMaterial>;
 }
 
 export interface ChassisParts {
@@ -161,8 +171,49 @@ function tyreMaterial(src: MeshPhysicalMaterial, u: TyreU, ghost: boolean) {
   return m as MeshPhysicalMaterial & { userData: { u: typeof u } };
 }
 
+let blurTex: Texture | null = null;
+/** The spinning wheel as the eye sees it: spoke metal smeared into rings around a clear hub. Built
+ * from numbers (no canvas), so the scene also builds where there is no document. */
+function spinBlurTexture(): Texture {
+  if (blurTex) return blurTex;
+  const N = 128;
+  // radius (0 centre … 1 rim) → grey level and opacity, linear between the stops
+  // the hub and centre cap stay clear (they read the same turning or not); the spoke band smears
+  const STOPS: [number, number, number][] = [
+    [0.0, 40, 0],
+    [0.22, 40, 0],
+    [0.3, 120, 0.85],
+    [0.7, 150, 0.8],
+    [0.9, 110, 0.8],
+    [1.0, 70, 0.6],
+  ];
+  const data = new Uint8Array(N * N * 4);
+  for (let y = 0; y < N; y++)
+    for (let x = 0; x < N; x++) {
+      const r = Math.min(1, Math.hypot(x + 0.5 - N / 2, y + 0.5 - N / 2) / (N / 2));
+      let k = 1;
+      while (k < STOPS.length - 1 && STOPS[k][0] < r) k++;
+      const [r0, g0, a0] = STOPS[k - 1];
+      const [r1, g1, a1] = STOPS[k];
+      const f = Math.min(1, Math.max(0, (r - r0) / (r1 - r0)));
+      const g = g0 + (g1 - g0) * f;
+      const i = (y * N + x) * 4;
+      data[i] = g;
+      data[i + 1] = g + 4;
+      data[i + 2] = g + 9;
+      data[i + 3] = (a0 + (a1 - a0) * f) * 255;
+    }
+  const t = new DataTexture(data, N, N, RGBAFormat);
+  t.colorSpace = SRGBColorSpace;
+  t.magFilter = LinearFilter;
+  t.minFilter = LinearFilter;
+  t.needsUpdate = true;
+  blurTex = t;
+  return t;
+}
+
 /** The rim: barrel, five double spokes, lug nuts and the centre cap. */
-function rimGeometry(): { metal: BufferGeometry; dark: BufferGeometry } {
+function rimGeometry(): { metal: BufferGeometry; back: BufferGeometry; dark: BufferGeometry } {
   const w = RIM_W;
   const barrel = lathe(
     [
@@ -228,7 +279,8 @@ function rimGeometry(): { metal: BufferGeometry; dark: BufferGeometry } {
   }
   const cap = alongAxis(lathe([[0, 0], [0.03, 0], [0.03, 0.006], [0.026, 0.01], [0, 0.011]], 'y', 32), 'z');
   cap.translate(0, 0, faceZ - 0.04);
-  return { metal: merge([barrel, ...spokes, hub]), dark: merge([...nuts, cap]) };
+  // two-tone: machined spoke faces over a graphite barrel and hub
+  return { metal: merge(spokes), back: merge([barrel, hub]), dark: merge([...nuts, cap]) };
 }
 
 export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): ChassisParts {
@@ -258,7 +310,7 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
     const spinNode = rig.adopt(spin, `wheel-spin-${c.id}`, 'wheel', W, [], []);
     void spinNode;
     // wheel (rim) and tyre
-    const wheelNode = rig.part(spin, `wheel-${c.id}`, 'wheel', W, [['aluminium', rim.metal.clone(), '#8e939a'], ['polymerGloss', rim.dark.clone()]], { local: true });
+    const wheelNode = rig.part(spin, `wheel-${c.id}`, 'wheel', W, [['machined', rim.metal.clone(), '#c3c8ce'], ['aluminium', rim.back.clone(), '#3c4047'], ['polymerGloss', rim.dark.clone()]], { local: true });
     const plain = rig.mat(W, 'tyre');
     const tu: TyreU = { uSpin: { value: 0 }, uFlat: { value: 0.012 }, uRadius: { value: TIRE.radius }, uBlur: { value: 0 } };
     const tm = tyreMaterial(plain.opaque, tu, false);
@@ -272,6 +324,15 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
     tyreHolder.name = `tyre-${c.id}`;
     if (sd < 0) tyreHolder.rotation.y = Math.PI;
     tyreHolder.add(tyre);
+    // the spin blur: a disc over the spokes that fades in when the wheel turns too far between
+    // two drawn frames for its spokes to be read (they would strobe, or seem to turn backwards)
+    const blurMat = new MeshStandardMaterial({ map: spinBlurTexture(), transparent: true, opacity: 0, depthWrite: false, metalness: 0.7, roughness: 0.38 });
+    const blur = new Mesh(new CircleGeometry(RIM_R - 0.004, 48), blurMat);
+    blur.position.z = RIM_W / 2 - 0.002;
+    blur.name = `wheel-blur-${c.id}`;
+    blur.visible = false;
+    blur.renderOrder = 3;
+    tyreHolder.add(blur);
     group.add(tyreHolder);
     rig.adopt(tyreHolder, `tyre-${c.id}`, 'tyre', W, [tyre], [tyrePair]);
     // brake disc (vented), on the spinning hub, inboard of the wheel
@@ -318,7 +379,7 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
     const up = merge([
       rbox(0.07, 0.3, 0.05, 0.02, 0.0, c.front ? 0.04 : 0.02, kz),
       at(alongAxis(lathe([[0.0, -0.03], [0.06, -0.03], [0.065, 0.02], [0.0, 0.02]], 'y', 32), 'z'), 0, 0, kz + sd * 0.0),
-      ...(c.front ? [rod(new Vector3(0, -0.02, kz), new Vector3(0.17, -0.04, kz - sd * 0.02), 0.014, 10)] : []),
+      ...(c.front ? [rod(new Vector3(0, -0.02, kz), new Vector3(STEER_GEO.tieX, 0.28 - WHEEL_Y, -sd * STEER_GEO.tieZ), 0.014, 10)] : []),
     ]);
     rig.part(group, `upright-${c.id}`, c.front ? 'steering-knuckle' : 'rear-upright', S, [['castAl', up]], { local: true });
     rig.part(group, `hub-${c.id}`, 'wheel-hub-bearing', S, [['machined', rod(new Vector3(0, 0, -sd * 0.09), new Vector3(0, 0, sd * 0.03), 0.045, 28)]], { local: true });
@@ -331,7 +392,9 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
     if (c.front) {
       local.lbj = P(0.005, 0.17 - WHEEL_Y, -sd * 0.07);
       local.ubj = P(-0.02, 0.53 - WHEEL_Y, -sd * 0.13);
-      local.tie = P(0.17, 0.28 - WHEEL_Y, -sd * 0.09);
+      // the steering arm's ball joint: ahead of the axle and outboard of the steering axis
+      // (lower to upper ball joint), so the linkage turns the inner wheel more (Ackermann)
+      local.tie = P(STEER_GEO.tieX, 0.28 - WHEEL_Y, -sd * STEER_GEO.tieZ);
       local.damper = P(0.015, 0.21 - WHEEL_Y, -sd * 0.17);
       const lowerIn = [P(c.x + 0.17, 0.2, sd * 0.36), P(c.x - 0.2, 0.2, sd * 0.36)];
       const upperIn = [P(c.x + 0.1, 0.56, sd * 0.43), P(c.x - 0.12, 0.56, sd * 0.43)];
@@ -340,7 +403,7 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
       links.push(armLink(rig, root, `lower-arm-${c.id}`, 'lower-control-arm', S, lowerIn[0], lowerIn[1], toWorld(local.lbj), ci, 0.016));
       links.push(armLink(rig, root, `upper-arm-${c.id}`, 'upper-control-arm', S, upperIn[0], upperIn[1], toWorld(local.ubj), ci, 0.012));
       // tie rod from the rack's end to the steering arm
-      const rackEnd = P(c.x + 0.17, 0.3, sd * 0.33);
+      const rackEnd = P(c.x + STEER_GEO.tieX, 0.3, sd * STEER_GEO.rackZ);
       links.push(stretchLink(rig, root, `tie-rod-${c.id}`, 'tie-rod', 'steering', rackEnd, toWorld(local.tie), ci, 0.009, 'tierod'));
       // coil-over: damper body on the arm, rod and spring up to the tower
       const top = P(c.x + 0.03, 0.74, sd * 0.56);
@@ -370,7 +433,7 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
       const outer = new Vector3(c.x, WHEEL_Y, c.z - sd * 0.12);
       links.push(halfShaft(rig, root, c.id, inner, outer, ci));
     }
-    corners.push({ group, spin, tyre, tyreMat: tm as CornerParts['tyreMat'], rotorNode, wheelNode, calipers, pads, local });
+    corners.push({ group, spin, tyre, tyreMat: tm as CornerParts['tyreMat'], rotorNode, wheelNode, calipers, pads, local, blur });
   });
 
   // ───────────────────────── anti-roll bars, subframes ─────────────────────────
@@ -395,20 +458,21 @@ export function buildChassis(rig: Rig, parent: Object3D, sprung: Object3D): Chas
 
   // ───────────────────────── steering ─────────────────────────
   const rackY = 0.3;
-  const rackX = BODY.xFront + 0.17;
+  const rackX = BODY.xFront + STEER_GEO.tieX;
+  const rz = STEER_GEO.rackZ;
   const rack = rig.part(
     sprung,
     'steering-rack',
     'steering-rack',
     'steering',
     [
-      ['machined', rod(new Vector3(rackX, rackY, -0.33), new Vector3(rackX, rackY, 0.33), 0.012, 14)],
+      ['machined', rod(new Vector3(rackX, rackY, -rz), new Vector3(rackX, rackY, rz), 0.012, 14)],
     ],
     { pivot: new Vector3(rackX, rackY, 0) },
   );
   rig.part(sprung, 'steering-gear-housing', 'steering-rack', 'steering', [
     ['castAl', rod(new Vector3(rackX, rackY, -0.26), new Vector3(rackX, rackY, 0.22), 0.026, 18)],
-    ['rubber', merge([-1, 1].map((s) => rod(new Vector3(rackX, rackY, s * 0.22), new Vector3(rackX, rackY, s * 0.31), 0.022, 14, 0.014)))],
+    ['rubber', merge([-1, 1].map((s) => rod(new Vector3(rackX, rackY, s * 0.22), new Vector3(rackX, rackY, s * (rz - 0.02)), 0.022, 14, 0.014)))],
   ]);
   rig.part(sprung, 'eps-motor', 'eps-motor', 'steering', [
     ['castAl', at(alongAxis(lathe([[0, 0], [0.045, 0], [0.045, 0.13], [0.035, 0.14], [0, 0.14]], 'y', 28), 'x'), rackX - 0.16, rackY - 0.02, -0.18)],

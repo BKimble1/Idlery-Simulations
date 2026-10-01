@@ -22,7 +22,7 @@ import { buildEngine, type EngineParts } from './engineGeo';
 import { buildDrivetrain, type DrivetrainParts } from './drivetrainGeo';
 import { buildChassis, type ChassisParts } from './chassisGeo';
 import { buildSystems, type SystemsParts } from './systemsGeo';
-import { buildCabin, type CabinParts } from './cabinGeo';
+import { buildCabin, buildDoorTrims, type CabinParts } from './cabinGeo';
 import { Rig, type PartNode } from './rig';
 
 export interface Car {
@@ -99,7 +99,9 @@ export function buildCar(bodyGeo: BufferGeometry): Car {
     pivot.add(p.group);
     bodyRoot.add(pivot);
     const node = rig.adopt(pivot, `panel-${p.name}`, spec.comp, 'body', [p.paint, p.glass], []);
-    if (spec.open) rig.explode(node, 'open', new Vector3(), { q: spec.open });
+    // each opening panel on its own group (`open-<panel>`): all of them open together on the
+    // `open` channel, or one alone on `open:<panel>` (the driver's door for the start button)
+    if (spec.open) rig.explode(node, `open-${p.name}`, new Vector3(), { q: spec.open });
     rig.explode(node, 'explode', spec.explode, { q: spec.explodeQ, delay: spec.delay });
     nodes[p.name] = node;
   }
@@ -109,6 +111,7 @@ export function buildCar(bodyGeo: BufferGeometry): Car {
   const drivetrain = buildDrivetrain(rig, sprung);
   const systems = buildSystems(rig, sprung);
   const cabin = buildCabin(rig, sprung);
+  buildDoorTrims(rig, Object.fromEntries(body.panels.map((p) => [p.name, p.group])));
   const chassis = buildChassis(rig, root, sprung);
 
   // ── the full exploded view: in order, with the body lifting first and the powertrain last
@@ -176,11 +179,11 @@ export function buildCar(bodyGeo: BufferGeometry): Car {
   eng('oil-pan', V(0, -0.24, 0), 0.2);
   eng('oil-pump', V(0, -0.16, 0), 0.2);
   eng('oil-pickup', V(0, -0.2, 0), 0.2);
-  eng('timing-cover', V(0.22, 0, 0), 0.05);
+  eng('timing-cover', V(0.22, 0, 0), 0.08);
   eng('timing-chain', V(0.12, 0.0, 0), 0.25);
   eng('chain-guides', V(0.12, 0.0, 0), 0.25);
   eng('chain-tensioner', V(0.12, 0.0, 0), 0.25);
-  eng('harmonic-balancer', V(0.3, 0, 0), 0.1);
+  eng('harmonic-balancer', V(0.3, 0, 0), 0.02);
   for (const n of ['accessory-belt', 'pulley-alternator', 'pulley-tensioner', 'pulley-idler', 'pulley-waterpump', 'pulley-compressor']) eng(n, V(0.36, 0, 0), 0.0);
   for (let i = 0; i < 4; i++) {
     eng(`piston-${i + 1}`, V(0, 0.16, 0), 0.32);

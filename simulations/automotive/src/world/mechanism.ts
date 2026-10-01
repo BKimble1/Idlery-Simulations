@@ -16,9 +16,9 @@
  *   ride state         → body heave, pitch and roll; wheel travel; every link between them
  */
 import { Quaternion, Vector3 } from 'three';
-import { STEERING, TIRE } from '../spec/vehicle';
+import { STEERING, TIRE, WHEEL_Y } from '../spec/vehicle';
 import { CYCLE, pistonDrop, phaseDeg, intakeLift, exhaustLift, CRANK_R, ROD_L } from '../sim/engine';
-import { PLANETARY } from '../sim/drivetrain';
+import { GEARSETS, SHAFT_INDEX } from '../sim/geartrain';
 import type { CarState } from '../sim/car';
 import { CORNERS, type Link } from '../scene/car/chassisGeo';
 import { MAX_LIFT_EX, MAX_LIFT_IN, placeChain } from '../scene/car/engineGeo';
@@ -35,6 +35,9 @@ export interface MechView {
   crank: number;
   turbine: number;
   stator: number;
+  /** The geartrain's eight shaft angles and each set's planet spin (sim/geartrain.ts). */
+  gt: number[];
+  gtPlanet: number[];
   driveshaft: number;
   carrier: number;
   spider: number;
@@ -57,7 +60,7 @@ export interface MechView {
 }
 
 export function emptyView(): MechView {
-  return { crank: 0, turbine: 0, stator: 0, driveshaft: 0, carrier: 0, spider: 0, wheel: [0, 0, 0, 0], wheelZ: [0, 0, 0, 0], steer: [0, 0, 0, 0], steerWheel: 0, heave: 0, pitch: 0, roll: 0, fan: 0, fz: [4000, 4000, 3700, 3700], brakeN: 0, throttle: 0, cranking: false, lockup: 0, start: false, ignition: false };
+  return { crank: 0, turbine: 0, stator: 0, gt: [0, 0, 0, 0, 0, 0, 0, 0], gtPlanet: [0, 0, 0, 0], driveshaft: 0, carrier: 0, spider: 0, wheel: [0, 0, 0, 0], wheelZ: [0, 0, 0, 0], steer: [0, 0, 0, 0], steerWheel: 0, heave: 0, pitch: 0, roll: 0, fan: 0, fz: [4000, 4000, 3700, 3700], brakeN: 0, throttle: 0, cranking: false, lockup: 0, start: false, ignition: false };
 }
 
 /** Unwrapped interpolation of an angle that may have wrapped by `period` between steps. */
@@ -73,6 +76,8 @@ export function interpolate(prev: CarState, cur: CarState, t: number, out: MechV
   out.crank = lerpAngle(prev.crank, cur.crank, t, CYCLE);
   out.turbine = lerpAngle(prev.turbineAngle, cur.turbineAngle, t, Math.PI * 2);
   out.stator = lerpAngle(prev.statorAngle, cur.statorAngle, t, Math.PI * 2);
+  for (let i = 0; i < 8; i++) out.gt[i] = lerpAngle(prev.gt[i], cur.gt[i], t, Math.PI * 2);
+  for (let i = 0; i < 4; i++) out.gtPlanet[i] = lerpAngle(prev.gtPlanet[i], cur.gtPlanet[i], t, Math.PI * 2);
   out.driveshaft = lerpAngle(prev.driveshaftAngle, cur.driveshaftAngle, t, Math.PI * 2);
   out.carrier = lerpAngle(prev.carrierAngle, cur.carrierAngle, t, Math.PI * 2);
   out.spider = lerpAngle(prev.spiderAngle, cur.spiderAngle, t, Math.PI * 2);
@@ -102,6 +107,13 @@ const _v = new Vector3();
 const _v2 = new Vector3();
 const _a = new Vector3();
 const _b = new Vector3();
+const _k = new Vector3();
+const _u = new Vector3();
+const _rackAxis = new Vector3();
+const _r0 = new Vector3();
+const _r1 = new Vector3();
+const _c = new Vector3();
+const _qi = new Quaternion();
 /** The body's roll and pitch pivot (about the roll centres' height). */
 const BODY_PIVOT = new Vector3(0, 0.12, 0);
 
@@ -175,21 +187,14 @@ export class Mechanism {
     D.lockup.mp.set(0.003 * v.lockup, 0, 0);
     D.inputShaft.mq.copy(_q);
     D.stator.mq.setFromAxisAngle(X, -v.stator);
-    // gearsets: ring = input, carrier between input and output (set k nearer the output for
-    // later sets), sun and planets from Willis' equation, so every mesh is consistent
-    const S = PLANETARY.sun;
-    const R = PLANETARY.ring;
-    const P = PLANETARY.planet;
+    // the geartrain: every member at its own shaft's angle from the model, which solves them
+    // all from the applied elements (sim/geartrain.ts), so each drawn mesh is the model's
     D.gearsets.forEach((gs, k) => {
-      const ring = v.turbine;
-      const f = (k + 1) / 5;
-      const carrier = ring + (v.driveshaft - ring) * f;
-      const sun = ((S + R) * carrier - R * ring) / S;
-      gs.ring.mq.setFromAxisAngle(X, -ring);
-      gs.carrier.mq.setFromAxisAngle(X, -carrier);
-      gs.sun.mq.setFromAxisAngle(X, -sun);
-      const planet = ((ring - carrier) * R) / P;
-      for (const pl of gs.planets) pl.mq.setFromAxisAngle(X, -planet);
+      const def = GEARSETS[k];
+      gs.ring.mq.setFromAxisAngle(X, -v.gt[SHAFT_INDEX[def.ring]]);
+      gs.carrier.mq.setFromAxisAngle(X, -v.gt[SHAFT_INDEX[def.carrier]]);
+      gs.sun.mq.setFromAxisAngle(X, -v.gt[SHAFT_INDEX[def.sun]]);
+      for (const pl of gs.planets) pl.mq.setFromAxisAngle(X, -v.gtPlanet[k]);
     });
     _q.setFromAxisAngle(X, -v.driveshaft);
     for (const n of D.output) n.mq.copy(_q);
@@ -210,11 +215,21 @@ export class Mechanism {
 
     // ── corners: travel, steer, spin; tyres
     const ch = car.chassis;
+    for (let i = 2; i < 4; i++) this.solveRear(i, ch.links, v);
     CORNERS.forEach((c, i) => {
       const corner = ch.corners[i];
       const node = car.rig.parts.get(`corner-${c.id}`)!;
       node.mp.set(0, v.wheelZ[i], 0);
-      node.mq.setFromAxisAngle(Y, v.steer[i]);
+      if (!c.front) node.mp.add(this.rearShift[i]);
+      if (c.front) {
+        // a front corner turns about its steering axis, the line through the ball joints
+        // (inclined inward and back, as on the car): the knuckle, disc, caliper and wheel swing
+        // about it, the ball joints stay where the arms hold them
+        const k = corner.local.lbj;
+        _u.subVectors(corner.local.ubj, k).normalize();
+        node.mq.setFromAxisAngle(_u, v.steer[i]);
+        node.mp.add(k).sub(_v.copy(k).applyQuaternion(node.mq));
+      } else node.mq.setFromAxisAngle(Y, v.steer[i]);
       const spinNode = car.rig.parts.get(`wheel-spin-${c.id}`)!;
       spinNode.mq.setFromAxisAngle(NZ, v.wheel[i]);
       const u = corner.tyreMat.userData.u;
@@ -222,12 +237,13 @@ export class Mechanism {
       u.uFlat.value = Math.max(0.004, Math.min(0.04, v.fz[i] / TIRE.verticalStiffness));
     });
 
-    // ── links between the body and the corners
+    // ── links between the body and the corners (the rack first: the tie rods hang from it)
+    this.rackD = this.solveRack(ch.links, v);
     for (const l of ch.links) this.poseLink(l, v);
 
     // ── steering
     const steer = v.steerWheel;
-    ch.rack.mp.set(0, 0, -steer * (STEERING.rackPerRev / (2 * Math.PI)));
+    ch.rack.mp.set(0, 0, this.rackD);
     {
       const sw = ch.steeringWheel;
       _v.set(0, 1, 0).applyQuaternion(sw.base.q);
@@ -252,6 +268,120 @@ export class Mechanism {
     }
   }
 
+  /** The rack's travel this frame, m along the car's z (set by solveRack). */
+  rackD = 0;
+  private _want: number[] = [];
+  /** Each rear corner's straight links, found once. */
+  private rearLinks = new Map<number, Link[]>();
+  /** What is left of the tie rods' length error after the rack is placed (tests read it), m. */
+  rackResidual = 0;
+
+  /**
+   * Where the rack must be for both tie rods to keep their length: each knuckle's steering-arm
+   * point (turned with its wheel about the kingpin, raised with its travel) asks for a rack
+   * position; the rack is drawn at the mean of the two, near the travel the steering wheel's
+   * angle gives. What remains is the difference between the model's inner/outer angles and this
+   * linkage's own geometry (millimetres; see docs/ENGINEERING.md).
+   */
+  private solveRack(links: Link[], v: MechView): number {
+    const lin = -v.steerWheel * (STEERING.rackPerRev / (2 * Math.PI));
+    const axis = _rackAxis.set(0, 0, 1).applyQuaternion(this.bodyQ);
+    const want = this._want;
+    want.length = 0;
+    for (const l of links) {
+      if (l.kind !== 'tierod' || !CORNERS[l.corner].front) continue;
+      const a0 = this.bodyPoint(l.a, _a);
+      const b = this.knucklePoint(l, v, _b);
+      const w = _v.subVectors(b, a0);
+      const wr = w.dot(axis);
+      const disc = wr * wr - w.lengthSq() + l.restLen * l.restLen;
+      if (disc < 0) {
+        want.push(lin);
+        continue;
+      }
+      const r = Math.sqrt(disc);
+      // of the two rack positions that fit, the one nearer the steering wheel's
+      want.push(Math.abs(wr - r - lin) < Math.abs(wr + r - lin) ? wr - r : wr + r);
+    }
+    if (!want.length) return lin;
+    const d = want.reduce((x, y) => x + y, 0) / want.length;
+    this.rackResidual = want.length > 1 ? Math.abs(want[0] - want[1]) / 2 : 0;
+    return d;
+  }
+
+  /** How far each rear knuckle moves along the ground as it travels (the arcs its links allow), m. */
+  rearShift = [new Vector3(), new Vector3(), new Vector3(), new Vector3()];
+  /** The largest length error left in a rear link after the shift (tests read it), m. */
+  rearResidual = 0;
+
+  /**
+   * A rear wheel rises on the arcs of its links, not straight up: find the small shift of its
+   * knuckle along the ground (fore-aft and sideways) that lets its three straight links keep
+   * their lengths (least squares, a few Gauss-Newton steps from the last frame's answer).
+   */
+  private solveRear(ci: number, links: Link[], v: MechView) {
+    const d = this.rearShift[ci];
+    let mine = this.rearLinks.get(ci);
+    if (!mine) {
+      mine = links.filter((l) => l.corner === ci && l.kind === 'stretch');
+      this.rearLinks.set(ci, mine);
+    }
+    if (!mine.length) return;
+    for (let it = 0; it < 4; it++) {
+      // normal equations for (dx, dz)
+      let a11 = 0;
+      let a12 = 0;
+      let a22 = 0;
+      let g1 = 0;
+      let g2 = 0;
+      for (const l of mine) {
+        const a = this.bodyPoint(l.a, _a);
+        const b = _b.copy(l.b).add(d);
+        b.y += v.wheelZ[ci];
+        const w = _v.subVectors(b, a);
+        const len = w.length();
+        const r = len - l.restLen;
+        const jx = w.x / len;
+        const jz = w.z / len;
+        a11 += jx * jx;
+        a12 += jx * jz;
+        a22 += jz * jz;
+        g1 += jx * r;
+        g2 += jz * r;
+      }
+      // a little damping keeps the step well posed when the links are nearly parallel
+      a11 += 1e-4;
+      a22 += 1e-4;
+      const det = a11 * a22 - a12 * a12;
+      const dx = (a22 * g1 - a12 * g2) / det;
+      const dz = (a11 * g2 - a12 * g1) / det;
+      d.x -= dx;
+      d.z -= dz;
+    }
+    // never more than a few centimetres (a bad frame cannot throw the wheel away)
+    d.x = Math.max(-0.04, Math.min(0.04, d.x));
+    d.z = Math.max(-0.04, Math.min(0.04, d.z));
+    let worst = 0;
+    for (const l of mine) {
+      const b = _b.copy(l.b).add(d);
+      b.y += v.wheelZ[ci];
+      worst = Math.max(worst, Math.abs(b.distanceTo(this.bodyPoint(l.a, _a)) - l.restLen));
+    }
+    this.rearResidual = ci === 2 ? worst : Math.max(this.rearResidual, worst);
+  }
+
+  /** A tie rod's knuckle end: with the wheel's travel, turned with it about the steering axis. */
+  private knucklePoint(l: Link, v: MechView, out: Vector3): Vector3 {
+    const c = CORNERS[l.corner];
+    const local = this.car.chassis.corners[l.corner].local;
+    // the lower ball joint, raised with the wheel, in the root's frame
+    _k.set(c.x, WHEEL_Y + v.wheelZ[l.corner], c.z).add(local.lbj);
+    _u.subVectors(local.ubj, local.lbj).normalize();
+    out.copy(l.b);
+    out.y += v.wheelZ[l.corner];
+    return out.sub(_k).applyAxisAngle(_u, v.steer[l.corner]).add(_k);
+  }
+
   private poseLink(l: Link, v: MechView) {
     const ci = l.corner;
     const c = CORNERS[ci];
@@ -260,33 +390,45 @@ export class Mechanism {
     const a = this.bodyPoint(l.a, _a);
     const b = _b.copy(l.b);
     b.y += v.wheelZ[ci];
+    if (!c.front && !l.rigid) b.add(this.rearShift[ci]);
     if (l.kind === 'tierod' && c.front) {
-      _v.set(c.x, b.y, c.z);
-      b.sub(_v).applyAxisAngle(Y, v.steer[ci]).add(_v);
-      // the rack moves too
-      a.z += -v.steerWheel * (STEERING.rackPerRev / (2 * Math.PI));
+      this.knucklePoint(l, v, b);
+      // the rack end, where solveRack put the rack
+      a.addScaledVector(_rackAxis.set(0, 0, 1).applyQuaternion(this.bodyQ), this.rackD);
     }
     const n = l.node;
     if (l.kind === 'arm') {
       // a hinge on the body: turn about the inner pivots' axis so the ball joint follows
       const h = _v.subVectors(l.a2!, l.a).normalize();
       const restVec = _v2.subVectors(l.b, l.a);
-      const r0 = restVec.clone().addScaledVector(h, -restVec.dot(h));
-      // the target, in the body's frame
-      const inv = this.bodyQ.clone().invert();
-      const tgt = b.clone().sub(a).applyQuaternion(inv);
+      const r0 = _r0.copy(restVec).addScaledVector(h, -restVec.dot(h));
+      // the target, in the body's frame (scratch objects: this runs for every arm, every frame)
+      const inv = _qi.copy(this.bodyQ).invert();
+      const tgt = _r1.copy(b).sub(a).applyQuaternion(inv);
       const r1 = tgt.addScaledVector(h, -tgt.dot(h));
-      const ang = Math.atan2(h.dot(r0.clone().cross(r1)), r0.dot(r1));
+      const ang = Math.atan2(h.dot(_c.copy(r0).cross(r1)), r0.dot(r1));
       _q.setFromAxisAngle(h, ang);
       n.mq.copy(this.bodyQ).multiply(_q);
       n.mp.subVectors(a, l.a);
       return;
     }
     // straight members, re-aimed every frame:
-    //   tie rods, lateral links, half shafts  anchored on the body (a), aimed at b, stretched
+    //   lateral links (rear)                 anchored on the body (a), aimed at b, rigid: the rear
+    //                                        knuckle's shift (solveRear) keeps their lengths
+    //   tie rods (above)                     held at the steering arm, rigid
+    //   half shafts                          the same, lengthening in their plunging joint
     //   damper bodies and springs            anchored on the wheel side (b), aimed at a
     //                                        (a spring is compressed to fit; a damper body is not)
     //   damper rods                          hang from the top mount (a), sliding in the body
+    if (l.kind === 'tierod') {
+      // rigid, held at the steering arm: what the linkage cannot quite match of the model's
+      // Ackermann angles (millimetres) is taken up along the rod, inside the rack's boot
+      const dir = _v2.subVectors(b, a).normalize();
+      n.mq.setFromUnitVectors(_v.subVectors(l.b, l.a).normalize(), dir);
+      n.mp.copy(b).addScaledVector(dir, -l.restLen).sub(l.a);
+      n.ms.set(1, 1, 1);
+      return;
+    }
     const fromWheel = l.kind === 'damperBody' || l.kind === 'spring';
     const from = fromWheel ? b : a;
     const to = fromWheel ? a : b;
@@ -298,8 +440,8 @@ export class Mechanism {
     d1.normalize();
     n.mq.setFromUnitVectors(d0, d1);
     n.mp.subVectors(from, restFrom);
-    if (l.kind === 'damperRod' || l.kind === 'damperBody') n.ms.set(1, 1, 1);
-    else n.ms.set(1, len / l.restLen, 1);
+    if (l.kind === 'spring' || l.kind === 'halfshaft') n.ms.set(1, len / l.restLen, 1);
+    else n.ms.set(1, 1, 1);
   }
 }
 
