@@ -10,6 +10,7 @@ you run in the browser, at its own address, with a card on the homepage.
 | [`/photolithography`](https://simulations.idlery.com/photolithography) | **01 Photolithography**: build a chip, layer by layer | [`simulations/photolithography/`](simulations/photolithography/), kept in this repository |
 | [`/rocket`](https://simulations.idlery.com/rocket) | **02 Rocket Engineering** (KIMBLE): from the launch pad to orbit | [`simulations/rocket/`](simulations/rocket/), imported from [BKimble1/rocket-simulation](https://github.com/BKimble1/rocket-simulation) (see [its SOURCE.json](simulations/rocket/SOURCE.json)) |
 | [`/humanoid`](https://simulations.idlery.com/humanoid) | **03 Humanoid**: inside a machine built to move like us | [`simulations/humanoid/`](simulations/humanoid/), imported from [BKimble1/humanoid-simulation](https://github.com/BKimble1/humanoid-simulation) (see [its SOURCE.json](simulations/humanoid/SOURCE.json)) |
+| [`/automotive`](https://simulations.idlery.com/automotive) | **04 Automotive** (AUTOMOTIVE / ONE): how a car becomes motion | [`simulations/automotive/`](simulations/automotive/), imported from [BKimble1/automotive-simulation](https://github.com/BKimble1/automotive-simulation) (see [its SOURCE.json](simulations/automotive/SOURCE.json)) |
 
 The homepage is plain HTML and CSS with a few lines of script for the preview videos: it
 loads none of a simulation's code, which is downloaded only when a visitor opens it. Each
@@ -111,7 +112,10 @@ forced rule avoids). The rules were also checked with Netlify's own parsers and 
 simulations, 3 redirect rules and 8 header rules parse without errors; `/rocket`, `/rocket/`,
 `/rocket?v=mission&m=leo`, `/humanoid`, `/humanoid/` and `/humanoid?mode=simulate&lab=walk`
 match their forced rule, and `/rocket/assets/missing.js`, `/humanoid/assets/missing.js`,
-`/rocket/index.html` and `/humanoid/index.html` match none (they are files, or 404s).
+`/rocket/index.html` and `/humanoid/index.html` match none (they are files, or 404s). With
+Automotive added: 4 redirect rules and 10 header rules parse without errors, `/automotive`,
+`/automotive/` and `/automotive?mode=explore&system=brakes&part=brake-caliper` match its forced
+rule, and `/automotive/assets/missing.js` and `/automotive/index.html` match none.
 
 ## Adding a simulation
 
@@ -241,6 +245,35 @@ suites, including its continuity, Watch and camera tests, against the built site
 and loops without a cut (`"loop": true`); see
 [`site/media/humanoid/PROVENANCE.md`](site/media/humanoid/PROVENANCE.md).
 
+## Automotive
+
+AUTOMOTIVE / ONE (the S-1, an original front-engined, rear-wheel-drive sedan designed for the
+simulation; not a real car and carrying no maker's marks) is developed in
+[BKimble1/automotive-simulation](https://github.com/BKimble1/automotive-simulation) and imported
+the same way, with `scripts/import-simulation.mjs` (one commit, no history; its offline
+narration pipeline `tools/` and the narration QA file are left out). Nothing in
+`simulations/automotive/` is edited here; see [its SOURCE.json](simulations/automotive/SOURCE.json)
+for the commit.
+
+```bash
+npm run import-simulation -- automotive --repo https://github.com/BKimble1/automotive-simulation --ref <commit> --branch claude/automotive-one
+npm run build && npm run e2e && npm run e2e:automotive
+```
+
+**How it is built.** Its build script is `tsc -b && vite build`, so the default build command
+works, and it reads `VITE_FABONE_HOME` for its "Back to FAB / ONE" link. It registers no
+service worker and keeps no browser storage; everything it loads is under `/automotive/`,
+including the film's bundled narration (`/automotive/narration/<version>/`, revalidated hourly
+like the rocket's). Checked by the build and by `e2e/automotive.spec.ts`.
+
+**Its own tests** run at the route with `npm run e2e:automotive` (its Playwright suite: deep
+links and Back, search, the film, labs, a diagnosis, camera continuity, context loss, reduced
+motion and layout, on desktop, laptop, tablet and phone sizes).
+
+**Its preview** is recorded from the built site on its frame-stepped clock
+(`?virt=1&capture=1&quality=high`), from [`site/media/automotive/preview.json`](site/media/automotive/preview.json),
+and loops without a cut; see [`site/media/automotive/PROVENANCE.md`](site/media/automotive/PROVENANCE.md).
+
 ## Publishing
 
 The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONOS.
@@ -249,22 +282,22 @@ The site is published by uploading `dist/` to Netlify by hand; DNS stays at IONO
 
    ```bash
    npm run build
-   npm run package -- --name FAB_ONE_Humanoid_V2_Netlify    # release/FAB_ONE_Humanoid_V2_Netlify.zip
-   npm run verify-package -- release/FAB_ONE_Humanoid_V2_Netlify.zip
+   npm run package -- --name FAB_ONE_Automotive_Netlify    # release/FAB_ONE_Automotive_Netlify.zip
+   npm run verify-package -- release/FAB_ONE_Automotive_Netlify.zip
    ```
 
    (`npm run package` alone makes `release/fab-one-site.zip`.) The check unzips the package
    into an empty temporary folder, serves it with Netlify's rules, and asks for every route
    and every file the pages load. Unzip the package: the folder you get has `index.html`,
    `404.html`, `_redirects`, `_headers`, `sitemap.xml`, `robots.txt`, `assets/`, `media/`,
-   `photolithography/`, `rocket/` and `humanoid/` at its top level. Upload that folder, not a folder
+   `photolithography/`, `rocket/`, `humanoid/` and `automotive/` at its top level. Upload that folder, not a folder
    around it.
 2. In Netlify: for a new project, **Add new project → Deploy manually** and drop the folder;
    to update an existing one, open its **Deploys** page and drop the folder onto the upload
-   area at the bottom. The deploy summary should report 3 redirect rules and 8 header rules.
-   Check `https://<project-name>.netlify.app/`, `/photolithography`, `/rocket` and `/humanoid`
-   (also refreshed, and deep links such as `/rocket?v=mission&m=leo` and
-   `/humanoid?mode=simulate&lab=walk`).
+   area at the bottom. The deploy summary should report 4 redirect rules and 10 header rules.
+   Check `https://<project-name>.netlify.app/`, `/photolithography`, `/rocket`, `/humanoid` and
+   `/automotive` (also refreshed, and deep links such as `/rocket?v=mission&m=leo`,
+   `/humanoid?mode=simulate&lab=walk` and `/automotive?mode=explore&system=brakes&part=brake-caliper`).
 3. **Domain management → Add a domain → Add a domain you already own**, enter
    `simulations.idlery.com`, **Verify**, then add it. Netlify shows it as waiting for DNS.
 4. At IONOS: **Domains & SSL**, the gear icon next to `idlery.com` → **DNS** →

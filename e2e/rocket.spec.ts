@@ -22,15 +22,16 @@ async function shell(page: Page) {
 
 test.describe.configure({ timeout: 600_000 });
 
-test('the homepage lists Photolithography, then Rocket Engineering as 02, then Humanoid, as matching rows', async ({ page }, info) => {
+test('the homepage lists Photolithography, then Rocket Engineering as 02, then Humanoid and Automotive, as matching rows', async ({ page }, info) => {
   const errors = watchErrors(page);
   await page.goto('/');
   const cards = page.locator('article.card');
-  await expect(cards).toHaveCount(3);
+  await expect(cards).toHaveCount(4);
   await expect(cards.nth(0).getByRole('heading', { level: 3 })).toHaveText('Photolithography');
   await expect(cards.nth(1).getByRole('heading', { level: 3 })).toHaveText('Rocket Engineering');
   await expect(cards.nth(2).getByRole('heading', { level: 3 })).toHaveText('Humanoid');
-  expect(simulations.map((s) => s.slug)).toEqual(['photolithography', 'rocket', 'humanoid']);
+  await expect(cards.nth(3).getByRole('heading', { level: 3 })).toHaveText('Automotive');
+  expect(simulations.map((s) => s.slug)).toEqual(['photolithography', 'rocket', 'humanoid', 'automotive']);
 
   const card = cards.nth(1);
   // "02 · AEROSPACE ENGINEERING": the number is the card's place, the field is set in capitals

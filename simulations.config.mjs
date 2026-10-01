@@ -107,4 +107,22 @@ export default [
       alt: 'Recorded in the simulation: FO-H1, an original humanoid designed for it, stands alive in its dark test lab; its knee actuator slides out of the thigh and separates into motor, cycloidal reducer and bearings while it runs a stride of walking; the robot walks on the instrumented treadmill with its ground reactions shown; and it catches a 300 N push with a step.',
     },
   },
+  {
+    slug: 'automotive',
+    title: 'Automotive',
+    tagline: 'How a car becomes motion.',
+    field: 'Automotive engineering',
+    summary:
+      'Open up S-1, an original modern sedan, from the start button to the tyres on the road: watch it start and fire in cutaway, follow the torque through the gearbox and differential, and see every system at work. Then change its gearing, springs and brakes in eight labs, and diagnose six real faults.',
+    facts: ['Narrated film', '10 hero lessons', '6 faults to diagnose'],
+    launch: 'Launch simulation',
+    preview: {
+      mp4: 'media/automotive/preview.mp4',
+      webm: 'media/automotive/preview.webm',
+      poster: 'media/automotive/poster.webp',
+      alt: 'Recorded in the simulation: the S-1 sedan in its studio; the engine in cutaway as a cylinder fires; torque flowing from the crankshaft through the gearbox and driveshaft to the rear wheels; and the car taken apart into its systems.',
+    },
+    // the bundled narration keeps its file names from build to build
+    headers: { 'narration/*': REVALIDATED },
+  },
 ];

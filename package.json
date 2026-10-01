@@ -17,6 +17,7 @@
     "e2e": "playwright test",
     "e2e:photolithography": "node scripts/simulation-e2e.mjs photolithography",
     "e2e:humanoid": "node scripts/simulation-e2e.mjs humanoid",
+    "e2e:automotive": "node scripts/simulation-e2e.mjs automotive",
     "capture-preview": "node scripts/capture-preview.mjs",
     "package": "node scripts/package.mjs",
     "verify-package": "node scripts/verify-package.mjs",

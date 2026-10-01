@@ -126,6 +126,7 @@ const TYPE = {
   '.mp3': /^audio\/mpeg/,
   '.mp4': /^video\/mp4/,
   '.webm': /^video\/webm/,
+  '.bin': /^application\/octet-stream$/,
   '.xml': /^application\/xml/,
   '.txt': /^text\/plain/,
 };
@@ -259,7 +260,8 @@ try {
     const r = await get('/' + f.split('/').map(encodeURIComponent).join('/'), { method: 'HEAD' });
     const type = r.headers.get('content-type') ?? '';
     if (r.status !== 200) ok(false, `/${f}: ${r.status}`);
-    else if (type === 'application/octet-stream' || (TYPE[ext(f)] && !TYPE[ext(f)].test(type))) unknown.push(`/${f} (${type})`);
+    // (octet-stream is what an unknown extension gets, so it is a type only for raw binary data)
+    else if ((type === 'application/octet-stream' && ext(f) !== '.bin') || (TYPE[ext(f)] && !TYPE[ext(f)].test(type))) unknown.push(`/${f} (${type})`);
     else typed++;
   }
   ok(!unknown.length, `every file has its type${unknown.length ? `: not ${unknown.slice(0, 10).join(', ')}` : ''}`);

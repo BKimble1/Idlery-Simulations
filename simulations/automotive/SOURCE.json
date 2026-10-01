@@ -1,0 +1,72 @@
+{
+  "about": "Where simulations/automotive/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
+  "repository": "https://github.com/BKimble1/automotive-simulation",
+  "branch": "claude/automotive-one",
+  "commit": "d39e7eba173344e2a61bf818e18b24cec8f5ca8e",
+  "commitDate": "2026-10-01T08:32:06+00:00",
+  "commitSubject": "Keep the page's heading on phones",
+  "importedAt": "2026-10-01T08:32:18.912Z",
+  "command": "node scripts/import-simulation.mjs automotive --repo https://github.com/BKimble1/automotive-simulation --ref d39e7eba173344e2a61bf818e18b24cec8f5ca8e --branch claude/automotive-one",
+  "excluded": [
+    {
+      "pattern": "docs/recordings/",
+      "why": "verification videos made during development; not part of the app",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "docs/screenshots/",
+      "why": "screenshots made during development; not part of the app",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "tools/",
+      "why": "offline Python pipelines (narration, textures, brand, site bake); their outputs are committed in public/ and src/",
+      "files": 26,
+      "bytes": 229417
+    },
+    {
+      "pattern": "release/",
+      "why": "packaged builds",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "dist*/",
+      "why": "build output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "node_modules/",
+      "why": "dependencies (installed with npm ci)",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "test-results/",
+      "why": "test output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "playwright-report/",
+      "why": "test output",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "public/og/",
+      "why": "the stand-alone hub card (poster and preview clip); nothing in src/ or index.html loads it, and FAB / ONE records its own card preview in site/media/<slug>/",
+      "files": 0,
+      "bytes": 0
+    },
+    {
+      "pattern": "public/narration/*/qa.json",
+      "why": "measurements from the offline narration pipeline (tools/narration); the app reads only manifest.json and the audio",
+      "files": 1,
+      "bytes": 133543
+    }
+  ]
+}

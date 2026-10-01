@@ -1,0 +1,65 @@
+{
+  "about": "Shot list for the homepage preview (scripts/capture-preview.mjs), recorded from AUTOMOTIVE / ONE. Each segment opens the simulation at a deep link, as a visitor would, waits until the car is built and every material compiled, and renders frames on its frame-stepped clock (?virt=1: every frame is exactly 1/30 s). Setup frames are simulated without drawing (__fabAdvance(n, false)). Lesson segments seek their lesson to a step the way the scrubber does. The clip loops without a cut.",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "dpr": 1
+  },
+  "fps": 30,
+  "crossfade": 0.4,
+  "crf": 26,
+  "crfVp9": 43,
+  "query": "virt=1&capture=1&quality=high",
+  "ready": {
+    "hooks": "!!window.__fabAdvance && !!window.__fab && window.__fabStores.useApp.getState().ready",
+    "until": "window.__fabStores.useApp.getState().carReady",
+    "advancing": true,
+    "interval": 250,
+    "timeout": 180000
+  },
+  "advance": "window.__fabAdvance(1)",
+  "segments": [
+    {
+      "name": "intro",
+      "about": "The S-1 sedan in its studio, the camera drifting slowly.",
+      "path": "",
+      "setup": [{ "eval": "window.__fabAdvance(60, false)" }],
+      "frames": 75
+    },
+    {
+      "name": "cutaway",
+      "about": "The engine in cutaway: compression, the spark, and the flame driving the piston down.",
+      "path": "?mode=explore&lesson=four-stroke",
+      "setup": [
+        { "eval": "window.__fabAdvance(20, false)" },
+        { "eval": "(() => { const p = window.__fab.player; const b = p.beats.find((x) => x.beat.id === 'compression'); p.seek(b.start + 3.2); })()" },
+        { "eval": "window.__fabAdvance(100, false)" }
+      ],
+      "frames": 90
+    },
+    {
+      "name": "torque",
+      "about": "Pulling away: torque flows from the crankshaft through the gearbox and driveshaft to the rear wheels.",
+      "path": "?mode=explore&lesson=torque-path",
+      "setup": [
+        { "eval": "window.__fabAdvance(20, false)" },
+        { "eval": "(() => { const p = window.__fab.player; p.seek(1.0); })()" },
+        { "eval": "window.__fabAdvance(110, false)" }
+      ],
+      "frames": 90
+    },
+    {
+      "name": "exploded",
+      "about": "The car taken apart into its systems.",
+      "path": "?mode=explore&lesson=exploded",
+      "setup": [
+        { "eval": "window.__fabAdvance(20, false)" },
+        { "eval": "(() => { const p = window.__fab.player; const b = p.beats.find((x) => x.beat.id === 'explode'); p.seek(b.start + 0.05); })()" },
+        { "eval": "window.__fabAdvance(15, false)" }
+      ],
+      "frames": 105
+    }
+  ],
+  "loop": true,
+  "loopFade": 0.5
+}
