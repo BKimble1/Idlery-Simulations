@@ -338,3 +338,9 @@ branch `claude/fab-one-round-four-realism-x1ze0a`, at
 file unchanged into `simulations/photolithography/` (`git log --follow` reaches the earlier
 commits). What changed afterwards to run it at `/photolithography` is described in
 [its README](simulations/photolithography/README.md#inside-fab--one).
+
+Automotive is imported from
+[BKimble1/automotive-simulation](https://github.com/BKimble1/automotive-simulation): the commit,
+its branch and date, and what was left out are in
+[`simulations/automotive/SOURCE.json`](simulations/automotive/SOURCE.json); its card preview's
+origin is in [`site/media/automotive/PROVENANCE.md`](site/media/automotive/PROVENANCE.md).
