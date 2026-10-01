@@ -131,6 +131,7 @@ test('a lab computes off the page: its worker loads from the route and its resul
   page.on('worker', (w) => workers.push(new URL(w.url()).pathname));
   const out = outside(page);
   await fresh(page, '/automotive?mode=engineer&lab=braking&hooks=1');
+  out.length = 0;
   await ready(page);
   await expect(page.locator('.eng-results__title')).toContainText('Baseline', { timeout: 120_000 });
   expect(workers.length).toBeGreaterThan(0);
