@@ -1,0 +1,20 @@
+lab gearing: 370 ms, 281 samples, simT 14.000000000000064
+lab engine: 32 ms, 144 samples, simT 1.430000000000001
+lab braking: 168 ms, 237 samples, simT 4.719999999999987
+lab suspension: 116 ms, 701 samples, simT 3.4999999999999476
+lab weight: 170 ms, 141 samples, simT 2.800000000000002
+lab cornering: 207 ms, 231 samples, simT 4.59999999999999
+lab converter: 87 ms, 236 samples, simT 4.699999999999988
+lab electrical: 661 ms, 201 samples, simT 20.000000000000014
+seq film: worst seek 653 ms at 331.2 s (duration 389.7)
+seq start: worst seek 200 ms at 28.5 s (duration 28.5)
+seq four-stroke: worst seek 6 ms at 24.0 s (duration 24.0)
+seq firing-order: worst seek 117 ms at 26.0 s (duration 26.0)
+seq torque-path: worst seek 254 ms at 41.0 s (duration 41.0)
+seq differential: worst seek 344 ms at 19.0 s (duration 19.0)
+seq suspension: worst seek 150 ms at 17.0 s (duration 25.0)
+seq braking: worst seek 240 ms at 29.0 s (duration 37.0)
+seq cooling: worst seek 310 ms at 20.0 s (duration 28.0)
+seq electrical: worst seek 445 ms at 13.0 s (duration 21.0)
+seq exploded: worst seek 655 ms at 21.0 s (duration 21.0)
+seq slice: worst seek 261 ms at 93.5 s (duration 93.5)

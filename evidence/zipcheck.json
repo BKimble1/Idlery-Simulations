@@ -1,0 +1,277 @@
+[
+ {
+  "name": "/: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"FAB / ONE — Interactive engineering simulations by Idlery\", h1 \"Step inside real engineering.\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/: homepage heading",
+  "pass": true,
+  "detail": ""
+ },
+ {
+  "name": "/photolithography: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"Photolithography — Build a chip, layer by layer · FAB / ONE\", h1 \"Build a chip, layer by layer.\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/photolithography/: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"Photolithography — Build a chip, layer by layer · FAB / ONE\", h1 \"Build a chip, layer by layer.\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/rocket: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"KIMBLE · Rocket Engineering\", h1 \"Understand a rocket, part by part and ph\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/rocket/: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"KIMBLE · Rocket Engineering\", h1 \"Understand a rocket, part by part and ph\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/humanoid: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"Humanoid — Inside a machine built to move like us · FAB / ONE\", h1 \"HUMANOID\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/humanoid/: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"Humanoid — Inside a machine built to move like us · FAB / ONE\", h1 \"HUMANOID\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/automotive: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"AUTOMOTIVE / ONE — How a car becomes motion · FAB / ONE\", h1 \"AUTOMOTIVE / ONE\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "/automotive/: 200, renders, refresh, no errors",
+  "pass": true,
+  "detail": "status 200, title \"AUTOMOTIVE / ONE — How a car becomes motion · FAB / ONE\", h1 \"AUTOMOTIVE / ONE\", canvas true, errors [], failed []"
+ },
+ {
+  "name": "homepage: four cards in order",
+  "pass": true,
+  "detail": "[\"Photolithography\",\"Rocket Flight & Mission Simulation\",\"Humanoid\",\"Automotive\"]"
+ },
+ {
+  "name": "homepage: cards numbered 01–04",
+  "pass": true,
+  "detail": "[\"01\",\"02\",\"03\",\"04\"]"
+ },
+ {
+  "name": "homepage: launch links to the four routes",
+  "pass": true,
+  "detail": "[\"/photolithography\",\"/rocket\",\"/humanoid\",\"/automotive\"]"
+ },
+ {
+  "name": "homepage: each preview loads and plays in view",
+  "pass": true,
+  "detail": "[{\"t\":2.546394,\"ready\":4,\"src\":\"photolithography/preview-x09SWQlb.webm\",\"paused\":false,\"w\":1280},{\"t\":2.465801,\"ready\":4,\"src\":\"rocket/preview-BTbcbGYn.webm\",\"paused\":false,\"w\":1280},{\"t\":2.467869,\"ready\":4,\"src\":\"humanoid/preview-BZwHzNdg.webm\",\"paused\":false,\"w\":1280},{\"t\":2.456333,\"ready\":4,\"src\":\"automotive/preview-DAa1NZdk.webm\",\"paused\":false,\"w\":1280}]"
+ },
+ {
+  "name": "/automotive?mode=watch&t=120: lands",
+  "pass": true,
+  "detail": "\"Firing order\", now at /automotive?mode=watch&t=120, workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], errors [], failed []"
+ },
+ {
+  "name": "/automotive: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/automotive?mode=explore&system=brakes&part=brake-caliper: lands",
+  "pass": true,
+  "detail": "\"Brake calipers\", now at /automotive?mode=explore&system=brakes&part=brake-caliper, workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], errors [], failed []"
+ },
+ {
+  "name": "/automotive: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/automotive?mode=engineer&lab=braking: lands",
+  "pass": true,
+  "detail": "\"Stopping distance\", now at /automotive?mode=engineer&lab=braking, workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], errors [], failed []"
+ },
+ {
+  "name": "automotive lab: the worker loads from /automotive/assets and computes the result",
+  "pass": true,
+  "detail": "workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], result \"Baseline (design values)\""
+ },
+ {
+  "name": "/automotive: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/automotive?mode=simulate&scenario=overheat: lands",
+  "pass": true,
+  "detail": "\"Overheating on the motorway\", now at /automotive?mode=simulate&scenario=overheat, workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], errors [], failed []"
+ },
+ {
+  "name": "/automotive: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/automotive?mode=simulate&scenario=drive: lands",
+  "pass": true,
+  "detail": "\"workbench\", now at /automotive?mode=simulate&scenario=drive, workers [\"/automotive/assets/simWorker-6cdnpngM.js\"], errors [], failed []"
+ },
+ {
+  "name": "/automotive: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/humanoid?mode=simulate&lab=walk: lands",
+  "pass": true,
+  "detail": "\"Humanoid — Inside a machine built to move like us \", now at /humanoid?mode=simulate&lab=walk, workers [], errors [], failed []"
+ },
+ {
+  "name": "/humanoid: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/rocket?v=mission&m=leo: lands",
+  "pass": true,
+  "detail": "\"KIMBLE · Rocket Engineering\", now at /rocket?v=mission&m=leo&ch=pad, workers [], errors [], failed []"
+ },
+ {
+  "name": "/rocket: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/photolithography?step=expose: lands",
+  "pass": true,
+  "detail": "\"Photolithography — Build a chip, layer by layer · \", now at /photolithography?step=expose, workers [], errors [], failed []"
+ },
+ {
+  "name": "/photolithography: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "/photolithography?explore=scanner: lands",
+  "pass": true,
+  "detail": "\"Photolithography — Build a chip, layer by layer · \", now at /photolithography?explore=scanner, workers [], errors [], failed []"
+ },
+ {
+  "name": "/photolithography: Back to FAB / ONE reaches the four-card homepage",
+  "pass": true,
+  "detail": "at http://127.0.0.1:8895/, 4 cards"
+ },
+ {
+  "name": "automotive narration plays from /automotive/narration/film-3/ in the film",
+  "pass": true,
+  "detail": "[{\"src\":\"/automotive/narration/film-3/press.mp3\",\"t\":9.41,\"paused\":false,\"ready\":4},{\"src\":\"/automotive/narration/film-3/press.mp3\",\"t\":8.94,\"paused\":false,\"ready\":1},{\"src\":\"/automotive/narration/film-3/press.mp3\",\"t\":9.62,\"paused\":false,\"ready\":4}] errors []"
+ },
+ {
+  "name": "type /automotive/assets/index-DpO35s1t.js",
+  "pass": true,
+  "detail": "200 text/javascript; charset=UTF-8"
+ },
+ {
+  "name": "type /automotive/assets/index-B-4HOEjr.css",
+  "pass": true,
+  "detail": "200 text/css; charset=UTF-8"
+ },
+ {
+  "name": "narration manifest /automotive/narration/film-3/manifest.json",
+  "pass": true,
+  "detail": "200 application/json; charset=UTF-8"
+ },
+ {
+  "name": "narration /automotive/narration/film-3/film-intro.mp3",
+  "pass": true,
+  "detail": "200 audio/mpeg cache-control: public, max-age=3600, stale-while-revalidate=86400"
+ },
+ {
+  "name": "missing /automotive/assets/missing.js → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "missing /rocket/assets/missing.js → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "missing /humanoid/assets/missing.js → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "missing /photolithography/assets/missing.js → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "missing /automotive/assets/missing.bin → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "missing /nope → 404 (not an HTML page with 200)",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "probe /media/automotive/",
+  "pass": true,
+  "detail": "404 text/html; charset=UTF-8"
+ },
+ {
+  "name": "probe /sitemap.xml",
+  "pass": true,
+  "detail": "200 application/xml"
+ },
+ {
+  "name": "probe /robots.txt",
+  "pass": true,
+  "detail": "200 text/plain; charset=UTF-8"
+ },
+ {
+  "name": "photolithography service worker installs at its own scope",
+  "pass": true,
+  "detail": "[{\"scope\":\"http://127.0.0.1:8895/photolithography\",\"active\":true}]"
+ },
+ {
+  "name": "photolithography: controlled by its worker after a reload",
+  "pass": true,
+  "detail": "http://127.0.0.1:8895/photolithography/sw.js"
+ },
+ {
+  "name": "with the worker installed, / is not controlled by it",
+  "pass": true,
+  "detail": "null"
+ },
+ {
+  "name": "with the worker installed, /rocket is not controlled by it",
+  "pass": true,
+  "detail": "null"
+ },
+ {
+  "name": "with the worker installed, /humanoid is not controlled by it",
+  "pass": true,
+  "detail": "null"
+ },
+ {
+  "name": "with the worker installed, /automotive is not controlled by it",
+  "pass": true,
+  "detail": "null"
+ },
+ {
+  "name": "with the worker installed, /automotive/ is not controlled by it",
+  "pass": true,
+  "detail": "null"
+ },
+ {
+  "name": "photolithography: a later visit with the worker installed starts cleanly",
+  "pass": true,
+  "detail": "[]"
+ }
+]

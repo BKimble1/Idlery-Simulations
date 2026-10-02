@@ -1,0 +1,32 @@
+redirect rules 4 (parse errors 0); header rules 10 (parse errors 0)
+  /photolithography -> /photolithography/index.html 200!
+  /rocket -> /rocket/index.html 200!
+  /humanoid -> /humanoid/index.html 200!
+  /automotive -> /automotive/index.html 200!
+✓ / => none
+✓ /photolithography => /photolithography/index.html 200!
+✓ /photolithography/ => /photolithography/index.html 200!
+✓ /photolithography/assets/missing.js => none
+✓ /photolithography/index.html => none
+✓ /rocket => /rocket/index.html 200!
+✓ /rocket/ => /rocket/index.html 200!
+✓ /rocket/assets/missing.js => none
+✓ /rocket/index.html => none
+✓ /humanoid => /humanoid/index.html 200!
+✓ /humanoid/ => /humanoid/index.html 200!
+✓ /humanoid/assets/missing.js => none
+✓ /humanoid/index.html => none
+✓ /automotive => /automotive/index.html 200!
+✓ /automotive/ => /automotive/index.html 200!
+✓ /automotive/assets/missing.js => none
+✓ /automotive/index.html => none
+✓ /automotive?mode=watch&t=120 => /automotive/index.html 200!
+✓ /automotive?mode=explore&system=brakes&part=brake-caliper => /automotive/index.html 200!
+✓ /automotive?mode=engineer&lab=braking => /automotive/index.html 200!
+✓ /automotive?mode=simulate&scenario=overheat => /automotive/index.html 200!
+✓ /automotive/assets/missing.bin => none
+✓ /humanoid?mode=simulate&lab=walk => /humanoid/index.html 200!
+✓ /rocket?v=mission&m=leo => /rocket/index.html 200!
+✓ /photolithography?step=expose => /photolithography/index.html 200!
+✓ /nope => none
+all rules match as intended

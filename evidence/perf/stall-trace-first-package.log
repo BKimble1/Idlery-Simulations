@@ -1,0 +1,20 @@
+{"system":"power"} programs 37 -> 37
+  frames [{"ms":4749,"sync":{"getProgramInfoLog":4317,"getShaderInfoLog":402}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":16,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":12,"sync":{}},{"ms":0,"sync":{}}]
+  sync {"getProgramInfoLog":{"n":2,"ms":4317,"max":4315},"getShaderInfoLog":{"n":4,"ms":402,"max":402},"getProgramParameter":{"n":6,"ms":1,"max":1},"getActiveUniform":{"n":93,"ms":0,"max":0},"getUniformLocation":{"n":93,"ms":0,"max":0},"getActiveAttrib":{"n":4,"ms":0,"max":0},"getAttribLocation":{"n":4,"ms":0,"max":0}}
+  added []
+  removed []
+{"system":"brakes"} programs 37 -> 37
+  frames [{"ms":7856,"sync":{"getProgramInfoLog":6592,"getShaderInfoLog":1250}},{"ms":0,"sync":{}},{"ms":0,"sync":{}}]
+  sync {"getProgramInfoLog":{"n":1,"ms":6592,"max":6592},"getShaderInfoLog":{"n":2,"ms":1250,"max":1250},"getProgramParameter":{"n":3,"ms":0,"max":0},"getActiveUniform":{"n":48,"ms":0,"max":0},"getUniformLocation":{"n":48,"ms":0,"max":0},"getActiveAttrib":{"n":2,"ms":0,"max":0},"getAttribLocation":{"n":2,"ms":0,"max":0}}
+  added []
+  removed []
+{"system":"driveline","part":"differential"} programs 37 -> 38
+  frames [{"ms":8,"sync":{}},{"ms":0,"sync":{}},{"ms":6887,"sync":{"getProgramInfoLog":5870,"getShaderInfoLog":983}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":17,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":13,"sync":{}},{"ms":0,"sync":{}}]
+  sync {"getProgramInfoLog":{"n":2,"ms":5870,"max":5866},"getShaderInfoLog":{"n":4,"ms":983,"max":983},"getProgramParameter":{"n":6,"ms":0,"max":0},"getActiveUniform":{"n":95,"ms":0,"max":0},"getUniformLocation":{"n":95,"ms":0,"max":0},"getActiveAttrib":{"n":5,"ms":0,"max":0},"getAttribLocation":{"n":5,"ms":0,"max":0}}
+  added [{"key":"physical,STANDARD, …(59 fields)","nearest":"55:8388624→8388625"}]
+  removed []
+{"system":null,"part":null} programs 38 -> 38
+  frames [{"ms":17,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":21,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}}]
+  sync {}
+  added []
+  removed []

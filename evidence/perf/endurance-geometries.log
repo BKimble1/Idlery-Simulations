@@ -1,0 +1,19 @@
+{"label":"after open","gpuGeometries":411,"uploadedReachable":410,"orphans":1,"reachable":470,"textures":6,"programs":28,"newlyUploaded":410,"fresh":["studio-floor","Mesh","shell-glass < body-shell < panel-shell","hood-glass < body-hood < panel-hood","bumperFront-glass < body-bumperFront < panel-bumperFront","fenderL-glass < body-fenderL < panel-fenderL","fenderR-glass < body-fenderR < panel-fenderR","doorFL-glass < body-doorFL < panel-doorFL","doorFL-mirror < body-doorFL < panel-doorFL","doorFL-mirror < body-doorFL < panel-doorFL","doorFL-mirror < body-doorFL < panel-doorFL","door-trim-FL:trim < door-trim-FL < body-doorFL","doorFR-glass < body-doorFR < panel-doorFR","doorFR-mirror < body-doorFR < panel-doorFR","doorFR-mirror < body-doorFR < panel-doorFR"],"simT":0}
+{"label":"after film warm-up","gpuGeometries":452,"uploadedReachable":451,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":41,"fresh":["rolling-road","flow-coolantEngine < flows < sprung","flow-coolantBypass < flows < sprung","flow-coolantRadiator < flows < sprung","flow-radiatorAir < flows < sprung","flow-starterCurrent < flows < sprung","flow-chargeCurrent < flows < sprung","flow-groundReturn < flows < sprung","flow-ecuPower < flows < sprung","flow-torque < flows < sprung","flow-torqueL < flows < sprung","flow-torqueR < flows < sprung","Mesh < engine-viz < sprung","Mesh < engine-viz < sprung","Mesh < engine-viz < sprung"],"simT":52}
+{"label":"after film stops","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":1,"fresh":["Mesh < engine-viz < sprung"],"simT":119}
+{"label":"cycle 1","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":168,"filmSeek":130}
+{"label":"cycle 2","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":217,"filmSeek":175}
+{"label":"cycle 3","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":266,"filmSeek":220}
+{"label":"cycle 4","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":315,"filmSeek":265}
+{"label":"cycle 5","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":364,"filmSeek":310}
+{"label":"cycle 6","gpuGeometries":453,"uploadedReachable":452,"orphans":1,"reachable":486,"textures":7,"programs":28,"newlyUploaded":0,"fresh":[],"simT":413,"filmSeek":130}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Target page, context or browser has been closed
+    at frames (/tmp/claude-0/-home-user/f6a26f1d-f641-5f51-91eb-61b710b477f7/scratchpad/endure2.mjs:17:28)
+    at cycle (/tmp/claude-0/-home-user/f6a26f1d-f641-5f51-91eb-61b710b477f7/scratchpad/endure2.mjs:34:123)
+    at async file:///tmp/claude-0/-home-user/f6a26f1d-f641-5f51-91eb-61b710b477f7/scratchpad/endure2.mjs:65:13
+
+Node.js v22.22.0

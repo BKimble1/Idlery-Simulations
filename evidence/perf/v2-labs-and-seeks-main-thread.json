@@ -1,0 +1,111 @@
+[
+ {
+  "build": "V2",
+  "what": "idle lab page, 5 s",
+  "ms": 5004,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab engine: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1516,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab braking: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1528,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab suspension: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1509,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab weight: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1532,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab cornering: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1523,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab converter: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1511,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab electrical: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1523,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "lab gearing: switch to result",
+  "title": "Baseline (design values)",
+  "ms": 1509,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "film seek to 331.2 s (+3 s)",
+  "ms": 3704,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "film seek to 60 s (+3 s)",
+  "ms": 3131,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "film seek to 250 s (+3 s)",
+  "ms": 3259,
+  "longest": 0,
+  "count": 0,
+  "total": 0
+ },
+ {
+  "build": "V2",
+  "what": "page errors",
+  "errors": []
+ }
+]

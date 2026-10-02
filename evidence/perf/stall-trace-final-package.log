@@ -1,0 +1,20 @@
+{"system":"power"} programs 38 -> 38
+  frames [{"ms":17,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":14,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}}]
+  sync {}
+  added []
+  removed []
+{"system":"brakes"} programs 38 -> 38
+  frames [{"ms":16,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":17,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}}]
+  sync {}
+  added []
+  removed []
+{"system":"driveline","part":"differential"} programs 38 -> 38
+  frames [{"ms":27,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":25,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":18,"sync":{}},{"ms":0,"sync":{}}]
+  sync {}
+  added []
+  removed []
+{"system":null,"part":null} programs 38 -> 38
+  frames [{"ms":18,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}},{"ms":18,"sync":{}},{"ms":0,"sync":{}},{"ms":0,"sync":{}}]
+  sync {}
+  added []
+  removed []

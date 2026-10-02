@@ -1,0 +1,6 @@
+{"tier":"low","build":"first","readyMs":2623,"carReadyMs":2922,"longestTasks":[1567,661,282,189],"programs":25}
+{"tier":"low","build":"final","readyMs":2031,"carReadyMs":10960,"longestTasks":[3962,1996,1035,1031],"programs":26}
+{"tier":"medium","build":"first","readyMs":2105,"carReadyMs":2525,"longestTasks":[1190,625,337,96],"programs":35}
+{"tier":"medium","build":"final","readyMs":2283,"carReadyMs":22186,"longestTasks":[8115,4946,2156,1959],"programs":36}
+{"tier":"high","build":"first","readyMs":2019,"carReadyMs":2495,"longestTasks":[1110,602,391,98],"programs":35}
+{"tier":"high","build":"final","readyMs":2243,"carReadyMs":24398,"longestTasks":[5606,5018,4808,3320],"programs":36}

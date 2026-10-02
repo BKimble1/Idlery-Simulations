@@ -1,0 +1,69 @@
+{
+ "pass": true,
+ "samples": [
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 0.08,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 6.72,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 7.08,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 6.89,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 7.18,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 8.11,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 7.29,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 8.2,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 7.86,
+   "paused": false,
+   "ready": 4
+  },
+  {
+   "src": "/automotive/narration/film-3/press.mp3",
+   "t": 8.11,
+   "paused": false,
+   "ready": 4
+  }
+ ],
+ "audioResponses": [
+  "206 /automotive/narration/film-3/press.mp3 audio/mpeg"
+ ],
+ "errors": []
+}

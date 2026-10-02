@@ -1,0 +1,92 @@
+[
+ {
+  "build": "V1",
+  "quality": "high",
+  "group": "all",
+  "materialsOff": 0,
+  "medianMs": 1100,
+  "minMs": 250,
+  "calls": 457
+ },
+ {
+  "build": "V1",
+  "quality": "high",
+  "group": "no body paint",
+  "materialsOff": 11,
+  "medianMs": 733,
+  "minMs": 200,
+  "calls": 439
+ },
+ {
+  "build": "V1",
+  "quality": "high",
+  "group": "no glass",
+  "materialsOff": 11,
+  "medianMs": 750,
+  "minMs": 583,
+  "calls": 415
+ },
+ {
+  "build": "V1",
+  "quality": "high",
+  "group": "no studio floor",
+  "materialsOff": 1,
+  "medianMs": 1067,
+  "minMs": 317,
+  "calls": 455
+ },
+ {
+  "build": "V1",
+  "quality": "high",
+  "group": "no wheels",
+  "materialsOff": 18,
+  "medianMs": 1067,
+  "minMs": 250,
+  "calls": 434
+ },
+ {
+  "build": "V2",
+  "quality": "high",
+  "group": "all",
+  "materialsOff": 0,
+  "medianMs": 1717,
+  "minMs": 317,
+  "calls": 637
+ },
+ {
+  "build": "V2",
+  "quality": "high",
+  "group": "no body paint",
+  "materialsOff": 11,
+  "medianMs": 1783,
+  "minMs": 267,
+  "calls": 615
+ },
+ {
+  "build": "V2",
+  "quality": "high",
+  "group": "no glass",
+  "materialsOff": 11,
+  "medianMs": 1150,
+  "minMs": 567,
+  "calls": 593
+ },
+ {
+  "build": "V2",
+  "quality": "high",
+  "group": "no studio floor",
+  "materialsOff": 1,
+  "medianMs": 1217,
+  "minMs": 217,
+  "calls": 636
+ },
+ {
+  "build": "V2",
+  "quality": "high",
+  "group": "no wheels",
+  "materialsOff": 29,
+  "medianMs": 2050,
+  "minMs": 283,
+  "calls": 592
+ }
+]
