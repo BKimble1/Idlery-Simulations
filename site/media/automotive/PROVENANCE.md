@@ -1,12 +1,12 @@
 # automotive: card preview
 
-Recorded by `node scripts/capture-preview.mjs automotive --keep` on 2026-10-01 21:08 UTC, from the built site (`dist/`, served by scripts/serve.mjs), from the shot list in [preview.json](preview.json).
+Recorded by `node scripts/capture-preview.mjs automotive --keep --only=drive,cutaway,torque,exploded` on 2026-10-01 23:47 UTC, from the built site (`dist/`, served by scripts/serve.mjs), from the shot list in [preview.json](preview.json).
 
-- **Simulation source**: https://github.com/BKimble1/automotive-simulation, branch `claude/automotive-v2`, commit `1a3dc32250c6e4d28240bdca0d98c771d3df31a9` (2026-10-01T21:06:19+00:00), imported into simulations/automotive/ on 2026-10-01
+- **Simulation source**: https://github.com/BKimble1/automotive-simulation, branch `claude/automotive-v2`, commit `4432bfed8f1ecf7934005f7a1a2f24d835ec2fc6` (2026-10-01T23:06:01+00:00), imported into simulations/automotive/ on 2026-10-01
 - **Renderer**: Chromium (Playwright) with WebGL on ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver) (SwiftShader, a software renderer: no GPU)
 - **Clock**: frame-stepped (`window.__fabAdvance(1)` before each frame): every frame is exactly 1/30 s of simulation time, whatever the render time
 - **Picture**: 1280 x 720 at 30 fps, 11.50 s, 5 segments joined with 0.40 s cross-fades, the end fading into the beginning over 0.50 s (a seamless loop; the clip starts 0.50 s into the first segment), no sound
-- **Files**: preview.mp4 (H.264 High 4.0) 873 KB, preview.webm (VP9) 846 KB, poster.webp (the first frame) 45 KB
+- **Files**: preview.mp4 (H.264 High 4.0) 875 KB, preview.webm (VP9) 846 KB, poster.webp (the first frame) 45 KB
 
 | segment | address | ready, then setup | frames |
 |---|---|---|---|

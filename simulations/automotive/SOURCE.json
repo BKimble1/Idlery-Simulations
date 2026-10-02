@@ -2,11 +2,11 @@
   "about": "Where simulations/automotive/ comes from. Written by scripts/import-simulation.mjs; update it with the same script, never by hand.",
   "repository": "https://github.com/BKimble1/automotive-simulation",
   "branch": "claude/automotive-v2",
-  "commit": "4432bfed8f1ecf7934005f7a1a2f24d835ec2fc6",
-  "commitDate": "2026-10-01T23:06:01+00:00",
-  "commitSubject": "No shader stall at the start of a move: programs are first used while a view is prepared",
-  "importedAt": "2026-10-01T23:06:11.298Z",
-  "command": "node scripts/import-simulation.mjs automotive --repo https://github.com/BKimble1/automotive-simulation --ref 4432bfed8f1ecf7934005f7a1a2f24d835ec2fc6 --branch claude/automotive-v2",
+  "commit": "624bf236d548214fca598b54427b458fb677a311",
+  "commitDate": "2026-10-02T00:10:29+00:00",
+  "commitSubject": "e2e: the real-time test counts drawn frames for pause and play, not seconds",
+  "importedAt": "2026-10-02T00:14:28.268Z",
+  "command": "node scripts/import-simulation.mjs automotive --repo https://github.com/BKimble1/automotive-simulation --ref 624bf236d548214fca598b54427b458fb677a311 --branch claude/automotive-v2",
   "excluded": [
     {
       "pattern": "docs/recordings/",
