@@ -344,3 +344,8 @@ Automotive is imported from
 its branch and date, and what was left out are in
 [`simulations/automotive/SOURCE.json`](simulations/automotive/SOURCE.json); its card preview's
 origin is in [`site/media/automotive/PROVENANCE.md`](site/media/automotive/PROVENANCE.md).
+
+The four-simulation package with Automotive V2 is recorded in
+[`docs/release-automotive-v2.md`](docs/release-automotive-v2.md): every source commit, the tests
+actually run and their results, the package's size, file count and SHA-256, before-and-after
+evidence, measured performance and the known limitations.
